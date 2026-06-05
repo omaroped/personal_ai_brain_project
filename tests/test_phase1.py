@@ -131,7 +131,19 @@ def test_watcher_clear_pending_allows_future_requeue(tmp_path: Path) -> None:
     handler.on_modified(FakeFileEvent(file_path))
 
     assert queue.qsize() == 2
+
+
+def test_debounce_blocks_then_allows_after_threshold(tmp_path: Path) -> None:
+    """The debounce helper should block immediate repeats and allow later retries."""
+    queue: Queue = Queue()
+    db_path = tmp_path / "ingestion_index.db"
+    state_store = IngestionStateStore(db_path=db_path)
+    handler = IngestionEventHandler(queue=queue, state_store=state_store)
+    path = str(tmp_path / "retry.md")
+
+    assert handler._debounce(path) is True
     assert handler._debounce(path) is False
+
     handler._last_seen[path] -= DEBOUNCE_SECONDS + 0.1
     assert handler._debounce(path) is True
 

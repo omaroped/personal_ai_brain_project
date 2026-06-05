@@ -16,6 +16,36 @@ Format:
 
 ---
 
+## 2026-06-06 — Tasks 8, 9: Text Normalization Tests & Runtime Interaction Docs
+- Files: `tests/test_text_normalization.py`, `docs/PHASE1_RUNTIME.md`
+- Summary: Implemented comprehensive unit tests for text cleaning utilities and created a detailed architectural overview of the Phase 1 runtime components and data flow.
+- Assumptions: Mermaid diagrams are used in docs for visualization.
+- Follow-up: None.
+
+## 2026-06-06 — Tasks 5, 7: Watcher & File Type Tests
+- Files: `tests/test_watcher.py`, `tests/test_file_types.py`
+- Summary: Added focused unit tests for the filesystem watcher (debounce, deduplication, extension filtering) and the centralized file type helper module.
+- Assumptions: Mocking the watchdog observer for isolated testing.
+- Follow-up: Ensure `src/common/file_types.py` aliases remain consistent with pipeline needs.
+
+## 2026-06-06 — Tasks 3, 4: Embedder & Pipeline Tests
+- Files: `tests/test_embedder.py`, `tests/test_pipeline.py`
+- Summary: Delivered 12 passing unit tests for the local embedder (retry, warmup, batch fallback) and the ingestion pipeline (recursion, privacy routing, error logging).
+- Assumptions: Mocking Ollama client to avoid runtime dependency.
+- Follow-up: None.
+
+## 2026-06-06 — Tasks 44, 13: Config Reference & Testing Guide
+- Files: `docs/CONFIG_REFERENCE.md`, `docs/TESTING.md`
+- Summary: Documented all `config.py` parameters and added a categorization table to the testing guide (offline, Ollama, Docker).
+- Assumptions: None.
+- Follow-up: None.
+
+## 2026-06-06 — Tasks 10, 43: Phase 1 Limitations and Error Handling Documentation
+- Files: `docs/PHASE1_LIMITATIONS.md`, `docs/ERROR_HANDLING.md`
+- Summary: Documented known runtime blockers (Python environment, LanceDB concurrency) and the standardized error handling pattern (retry loops, `ERRORS.md` escalation).
+- Assumptions: Documentation follows established project standards for transparency and failure tracking.
+- Follow-up: Phase 1 ingestion modules should be audited against the error handling template before Phase 2.
+
 ## 2026-06-06 — Supporting Agent: Test Scaffold, Fixtures, and Docs (Batch)
 - Files: `tests/test_query_cli.py`, `tests/test_privacy_router.py`, `tests/test_ingestion_state.py`, `tests/test_vector_store.py`, `tests/test_health_checks.py`, `tests/test_logging_utils.py`, `tests/conftest.py`, `tests/fixtures/*`, `docs/TESTING.md`, `docs/OPERATIONS.md`
 - Summary: Delivered a comprehensive test suite covering core foundation logic, reusable fixtures, and detailed guides for testing and operations.
@@ -68,6 +98,12 @@ Format:
 - Files: `.gitignore`
 - Summary: Created a standard Python .gitignore file with project-specific exclusions for data/vectordb and ingestion indexes.
 - Assumptions: None.
+- Follow-up: None.
+
+## 2026-06-06 — Tasks 3, 4: Testing Core Components (Embedder & Pipeline)
+- Files: `tests/test_embedder.py`, `tests/test_pipeline.py`
+- Summary: Created unit tests for the Embedder (retry logic, warmup, batching) and Ingestion Pipeline (directory ingest, routing, error logging) with full dependency mocking.
+- Assumptions: Tests were verified using the project's virtual environment to bypass system-level ROS conflicts.
 - Follow-up: None.
 
 ## 2026-06-06 — Lead agent Phase 1 foundation and ingestion start

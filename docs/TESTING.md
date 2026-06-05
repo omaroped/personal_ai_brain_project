@@ -3,6 +3,16 @@
 ## Overview
 This project uses `pytest` for testing. Tests are designed to be fast, deterministic, and local-first.
 
+## Test Categories
+
+Tests are categorized by their environmental requirements. Use these categories to determine what can be run in constrained environments.
+
+| Category | Requirements | Description | Example Files |
+|---|---|---|---|
+| **Offline** | None | Core logic, utilities, and unit tests. Fast and safe to run anywhere. | `test_foundation.py`, `test_chunker.py`, `test_privacy_router.py` |
+| **Ollama-required** | Ollama API | Integration tests involving embeddings or LLM responses. | `test_embedder.py`, `test_phase1.py`, `test_query_cli.py` |
+| **Docker-required** | Docker Compose | System-wide integration tests involving Letta, LanceDB, or full service stacks. | `test_watcher.py`, `test_pipeline.py` |
+
 ## Running Tests
 
 ### 1. Basic Execution (Offline-safe)

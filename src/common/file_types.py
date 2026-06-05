@@ -40,3 +40,7 @@ def get_file_type_label(file_path: str | Path) -> str:
     }
     
     return mapping.get(ext, "unknown")
+
+# Task-specific aliases
+is_supported_ingest_file = is_allowed_file
+get_format_label = get_file_type_label

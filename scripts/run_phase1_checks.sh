@@ -1,32 +1,47 @@
 #!/bin/bash
-# MODULE: Script to run Phase 1 static checks, compile passes, and safe local validations.
+# Run static Phase 1 checks that are safe even when the local runtime is incomplete.
 
-set -e
+set -euo pipefail
 
 PROJECT_ROOT="/home/omar/personal_ai_brain_project"
 cd "$PROJECT_ROOT"
 
-echo "Step 1: Compile Pass (src/)"
-python3 -m compileall src/
+echo "== Phase 1 static checks =="
 
-echo "Step 2: Compile Pass (tests/)"
-python3 -m compileall tests/
+echo "-- Python compile pass"
+python3 -m py_compile \
+  query.py \
+  config.py \
+  src/common/*.py \
+  src/api/*.py \
+  src/ingestion/*.py \
+  src/memory/*.py \
+  tests/test_foundation.py \
+  tests/test_parallel_foundations.py \
+  tests/test_phase1.py \
+  tests/test_chunker.py \
+  tests/test_ingestion_state.py \
+  tests/test_privacy_router.py \
+  tests/test_vector_store.py \
+  tests/test_query_cli.py \
+  tests/test_query_count_command.py \
+  tests/test_query_legacy_mode.py \
+  tests/test_query_route_command.py \
+  tests/test_health_checks.py \
+  tests/test_logging_utils.py \
+  tests/test_cli_foundation.py
 
-echo "Step 3: Syntax Check with flake8 (if available)"
-if command -v flake8 >/dev/null 2>&1; then
-    flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+echo "-- Module header check"
+python3 scripts/check_module_headers.py
+
+echo "-- Function docstring check"
+python3 scripts/check_docstrings.py
+
+if command -v pytest >/dev/null 2>&1; then
+  echo "-- Offline pytest subset"
+  ./scripts/run_unit_subset.sh
 else
-    echo "flake8 not found, skipping syntax check."
+  echo "-- Offline pytest subset skipped: pytest not installed in current interpreter"
 fi
 
-echo "Step 4: Running Offline-safe Unit Tests"
-# Using the list from docs/TESTING.md
-source venv/bin/activate
-pytest tests/test_foundation.py \
-       tests/test_parallel_foundations.py \
-       tests/test_privacy_router.py \
-       tests/test_ingestion_state.py \
-       tests/test_health_checks.py \
-       tests/test_logging_utils.py
-
-echo "Phase 1 checks passed successfully."
+echo "Phase 1 static checks completed."
