@@ -1,61 +1,46 @@
-# Personal AI Brain: Master Plan (v4.0) - The Self-Evolving Digital Twin
+# Personal AI Brain: Master Engineering Plan v5.0
 
 ## 1. Vision: The Digital Brain Partner
-To build a "Personalized AI Operating System" that acts as a digital extension of the human brain. It must be a **partner** that is aware of the user's history, mistakes, and future goals, operating as a "Personal OS" rather than a mere chat interface.
+To bridge the human-machine cognitive gap by synthesizing local-first data storage with advanced cognitive memory, real-time voice synthesis, and desktop-use agent frameworks.
 
-### Core Principles (Integrated 2026)
-* **LLM as OS:** The agent acts as a kernel managing memory, state, and tools (Letta/MemGPT).
-* **Frictionless Ingestion:** Zero-effort data capture from web, files, and system activity.
-* **Hybrid Intelligence:** Local-first for privacy (Religious/Psychological data), Cloud-augmented for deep reasoning.
-* **Reflective Growth:** Daily background "Sleep-Time Compute" cycles and active "Daily Reviews" for learning consolidation.
+## 2. Project Constitution (CLAUDE.md)
+The project is governed by a strict set of rules for AI agents to prevent drift, context loss, and scope creep.
+* **Source of Truth:** `CLAUDE.md` and `STATUS.md`.
+* **Workflow:** Specify (specs/) -> Plan -> Implement (src/) -> Validate (tests/).
 
-## 2. Technical Architecture
-### A. The Memory Engine (Cognitive Tiering)
-* **Management:** **Letta** for stateful runtime. Memory "paging" between Core (Active Context), Recall (Episodic), and Archival (Library).
-* **Data Layer:** PostgreSQL + `pgvector` for episodic logs; LanceDB for local markdown/PDF indexing.
-* **Self-Refinement:** Background cycles to prune contradictions and compress logs into episodic summaries.
+## 3. Technology Stack (Locked)
+* **Runtime:** Python 3.11
+* **Memory:** Letta (MemGPT) + LanceDB + pgvector
+* **Inference:** Ollama (Mistral-7B / Llama-3)
+* **Voice:** Whisper.cpp (STT) + Kokoro ONNX (TTS)
+* **Agency:** Agent S + Bytebot (Docker Sandbox)
 
-### B. The Sensory & Ingestion Layer
-* **Voice-First Loop:** Silero VAD -> Whisper.cpp -> Ollama/Llama -> Kokoro ONNX (1.4s latency).
-* **Auto-Ingestion:** Browser extensions (Nexus-style), file watchers, and webhooks for YouTube/Notion/Gmail.
+## 4. Implementation Roadmap
 
-### C. The Action Layer (Desktop Agency)
-* **Framework:** **Agent S** for planning + specialized "App Agents" for OS-level execution.
-* **Security:** Sandboxed Ubuntu containers (**Bytebot**) for executing scripts and browsing.
-* **Permissions:** Human-in-the-loop "Dry Run" mode for destructive actions.
+### Phase 1 — The Vault (Weeks 1-2)
+* **Goal:** A searchable local knowledge base.
+* **Key Tasks:** File watcher, semantic indexing (LanceDB), Query CLI.
 
-### D. System Grounding (Environmental Awareness)
-* **Hardware Profile:** Optimized for Ryzen 5 5600H + RTX 3060 (6GB VRAM). 
-* **Tool Mapping:** Native integration with existing `Ollama` and `VS Code` installations.
-* **Contextual Paths:** Full awareness of `/home/omar/` directory structure for autonomous file retrieval.
+### Phase 2 — The Memory Engine (Weeks 3-4)
+* **Goal:** Stateful continuity and user profiling.
+* **Key Tasks:** Letta integration, User Profile extraction, Daily Review cycle.
 
-## 3. Implementation Roadmap
-* **Phase 1: Foundation (Weeks 1-2)**
-    * Obsidian vault + AnythingLLM for basic RAG.
-    * Setting up the `/opinions/` tracking system (Done).
-* **Phase 2: Memory & Identity (Weeks 3-4)**
-    * Integrating Letta for Core Memory management.
-    * Establishing the "Daily Review" and "User Profile" extraction logic.
-* **Phase 3: The Voice & Ingestion Loop (Weeks 5-6)**
-    * Deploying the local STT/TTS pipeline and the Nexus-style capture tools.
-* **Phase 4: Agentic Agency & Proactivity (Weeks 7-8)**
-    * Bytebot sandbox setup and proactive side-panel for contextual help.
+### Phase 3 — Ingestion Pipelines (Weeks 5-6)
+* **Goal:** Automated brain growth.
+* **Key Tasks:** Browser bookmarklet, PDF auto-processor, YouTube fetcher.
 
-## 4. Business & Impact Strategy
-* **Product Wedge:** "Academic/Professional Cognitive Partner" focusing on high-retention learning.
-* **Privacy Edge:** 100% local embedding and workspace isolation for personal domains.
+### Phase 4 — The Voice Layer (Week 7)
+* **Goal:** 1.4s latency natural voice interaction.
+* **Key Tasks:** Whisper.cpp (GPU), Kokoro ONNX, hotkey trigger.
 
-## 5. Metadata Tracking & Opinion Archive
-See `/opinions/` for granular technical specs:
-* `structured_integration.md` (Workflow)
-* `cognitive_memory_tiers.md` (10/10) - *MemGPT Paradigm*
-* `personal_os_paradigm.md` (10/10) - *LLM as OS*
-* `local_voice_pipeline.md` (9/10) - *1.4s Latency*
-* `desktop_orchestration.md` (9/10) - *Bytebot Sandbox*
-* `ingestion_pipelines.md` (9/10) - *Nexus Capture*
-* `hybrid_privacy_strategy.md` (9/10) - *Workspace Isolation*
-* `proactive_synthesis.md` (8/10) - *Context Hygiene*
-* `daily_log_reflection.md` (8/10) - *Nightly Review*
+### Phase 5 — Agency & Proactivity (Week 8+)
+* **Goal:** Autonomous "Computer-Use" and proactive assistance.
+* **Key Tasks:** Bytebot Sandbox, Task Planner, Proactive Side-panel.
+
+## 5. Security & Safety
+* **Sandbox:** All script executions and web browsing occur in a Docker container.
+* **Permission:** Human-in-the-loop "Dry Run" for any host file manipulation.
+* **Privacy:** Local-first by default; workspace isolation for sensitive data.
 
 ---
 *Last Updated: June 5, 2026*
