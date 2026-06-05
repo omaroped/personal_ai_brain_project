@@ -1,0 +1,1 @@
+---\ndomain: personal\n---\nToday I felt productive working on the AI brain.

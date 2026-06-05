@@ -27,7 +27,7 @@ Do NOT invent a workaround silently.
 **Owner:** Omar
 **Machine:** Ubuntu 22.04 LTS, Ryzen 5 5600H, RTX 3060 Laptop 6GB VRAM, 22GB RAM
 **Project Root:** `/home/omar/personal_ai_brain_project/`
-**Python version:** 3.10 (use `python3` explicitly in all commands)
+**Python version:** 3.11 (use `python3.11` explicitly in all commands)
 **Virtual environment:** Always activate before any pip or python command:
   `source /home/omar/personal_ai_brain_project/venv/bin/activate`
 
