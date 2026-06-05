@@ -69,6 +69,13 @@ def _render_search_results(query_text: str, results: list[tuple[str, SearchResul
         console.print("No results found.")
         return
 
+    unique_tables = {table_name for table_name, _ in results}
+    console.print(f'Query: "{query_text}"')
+    if len(unique_tables) == 1:
+        console.print(f"Results from: {next(iter(unique_tables))} table")
+    else:
+        console.print("Results from: multiple tables")
+
     table = Table(title=f"Search Results: {query_text}")
     table.add_column("#")
     table.add_column("Table")
@@ -134,7 +141,7 @@ def search(
     domain: Annotated[str | None, typer.Option("--domain", help="Optional domain filter.")] = None,
     table_name: Annotated[str, typer.Option("--table", help="documents, personal, or all.")] = "all",
     mode: Annotated[str, typer.Option("--mode", help="hybrid or vector.")] = "hybrid",
-    top_k: Annotated[int, typer.Option("--top-k", help="Maximum number of results.")] = 5,
+    top_k: Annotated[int, typer.Option("--top-k", "--top", help="Maximum number of results.")] = 5,
 ) -> None:
     """Search the vector store and print ranked retrieval results."""
     if table_name not in {"documents", "personal", "all"}:
@@ -173,7 +180,7 @@ def count(
     console.print(table)
 
 
-if __name__ == "__main__":
+def main() -> None:
     known_commands = {"health", "route", "search", "count"}
     if len(sys.argv) > 1 and sys.argv[1] not in known_commands and not sys.argv[1].startswith("-"):
         legacy_args = sys.argv[1:]
@@ -207,3 +214,7 @@ if __name__ == "__main__":
         search(query_text=query_text, domain=domain, table_name=table_name, mode=mode, top_k=top_k)
     else:
         app()
+
+
+if __name__ == "__main__":
+    main()

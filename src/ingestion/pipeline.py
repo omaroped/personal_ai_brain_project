@@ -10,13 +10,15 @@ from pathlib import Path
 from queue import Empty, Queue
 
 from config import VAULT_DIR
+from src.common.file_types import ALLOWED_EXTENSIONS, get_file_type_label, is_allowed_file
 from src.common.logging_utils import configure_logging
+from src.common.text_normalization import full_normalization
 from src.ingestion.chunker import Chunker
 from src.ingestion.embedder import Embedder
 from src.ingestion.pdf_extractor import ExtractedPage, PDFExtractor
 from src.ingestion.state import IngestionStateStore, compute_file_hash
 from src.ingestion.vector_store import VectorStore
-from src.ingestion.watcher import ALLOWED_EXTENSIONS, FileWatcher
+from src.ingestion.watcher import FileWatcher
 
 try:
     from docx import Document
@@ -39,6 +41,7 @@ class IngestionPipeline:
         self.personal_store = VectorStore("personal", embedder=self.embedder)
         self.state_store = IngestionStateStore()
         self._worker_thread: threading.Thread | None = None
+        self._watcher_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
     def start(self) -> None:
@@ -52,10 +55,20 @@ class IngestionPipeline:
         self._worker_thread = threading.Thread(target=self._process_queue, daemon=True)
         self._worker_thread.start()
 
-        watcher_thread = threading.Thread(target=self.watcher.start, daemon=True)
-        watcher_thread.start()
+        self._watcher_thread = threading.Thread(target=self.watcher.start, daemon=True)
+        self._watcher_thread.start()
 
         self.logger.info("Ingestion pipeline started.")
+
+    def stop(self) -> None:
+        """Stop the watcher and background worker."""
+        self._stop_event.set()
+        self.watcher.stop()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=2.0)
+        if self._watcher_thread and self._watcher_thread.is_alive():
+            self._watcher_thread.join(timeout=2.0)
+        self.logger.info("Ingestion pipeline stopped.")
 
     def ingest_file(self, filepath: Path) -> dict:
         """Ingest one supported file into the appropriate vector store.
@@ -67,7 +80,7 @@ class IngestionPipeline:
             dict: Ingestion statistics including chunk count and elapsed time.
         """
         started = time.perf_counter()
-        if filepath.suffix.lower() not in ALLOWED_EXTENSIONS:
+        if not is_allowed_file(filepath):
             raise ValueError(f"Unsupported file type: {filepath}")
         if not filepath.exists():
             raise FileNotFoundError(filepath)
@@ -128,7 +141,7 @@ class IngestionPipeline:
         processed = 0
         skipped = 0
         for filepath in dirpath.rglob("*"):
-            if not filepath.is_file() or filepath.suffix.lower() not in ALLOWED_EXTENSIONS:
+            if not filepath.is_file() or not is_allowed_file(filepath):
                 continue
             try:
                 result = self.ingest_file(filepath)
@@ -142,6 +155,19 @@ class IngestionPipeline:
             else:
                 skipped += 1
         return {"processed": processed, "skipped": skipped, "directory": str(dirpath)}
+
+    def status(self) -> dict:
+        """Return a lightweight snapshot of current pipeline state.
+
+        Returns:
+            dict: Queue depth, watcher state, and vector-table counts when available.
+        """
+        return {
+            "queue_size": self.queue.qsize(),
+            "watcher_running": getattr(self.watcher, "_running", False),
+            "documents_count": self.documents_store.count(),
+            "personal_count": self.personal_store.count(),
+        }
 
     def _process_queue(self) -> None:
         """Continuously process queued file paths until stopped."""
@@ -171,10 +197,11 @@ class IngestionPipeline:
             list[ExtractedPage]: Extracted pages for downstream chunking.
         """
         suffix = filepath.suffix.lower()
-        if suffix == ".pdf":
+        file_type = get_file_type_label(filepath)
+        if file_type == "pdf":
             return self.extractor.extract(filepath)
-        if suffix in {".md", ".txt"}:
-            text = filepath.read_text(encoding="utf-8")
+        if file_type in {"markdown", "text"}:
+            text = full_normalization(filepath.read_text(encoding="utf-8"))
             return [
                 ExtractedPage(
                     text=text,
@@ -184,12 +211,14 @@ class IngestionPipeline:
                     is_scanned=False,
                 )
             ]
-        if suffix == ".docx":
+        if file_type == "word":
             if Document is None:
                 self.logger.warning("python-docx unavailable; DOCX skipped: %s", filepath)
                 return []
             document = Document(filepath)
-            text = "\n".join(paragraph.text for paragraph in document.paragraphs if paragraph.text.strip())
+            text = full_normalization(
+                "\n".join(paragraph.text for paragraph in document.paragraphs if paragraph.text.strip())
+            )
             return [
                 ExtractedPage(
                     text=text,
@@ -241,5 +270,4 @@ def main() -> None:
         while True:
             time.sleep(1.0)
     except KeyboardInterrupt:
-        pipeline.watcher.stop()
-        pipeline._stop_event.set()
+        pipeline.stop()

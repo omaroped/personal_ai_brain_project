@@ -1,3 +1,4 @@
+# MODULE: Tests for shared logging configuration helpers and logger behavior.
 """Tests for logging configuration utilities."""
 
 from __future__ import annotations

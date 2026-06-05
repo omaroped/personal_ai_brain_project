@@ -12,10 +12,9 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from config import WATCH_DIRS
+from src.common.file_types import ALLOWED_EXTENSIONS, is_allowed_file
 from src.common.logging_utils import configure_logging
 from src.ingestion.state import IngestionStateStore, compute_file_hash
-
-ALLOWED_EXTENSIONS = {".pdf", ".md", ".txt", ".docx"}
 DEBOUNCE_SECONDS = 2.0
 
 
@@ -62,7 +61,7 @@ class IngestionEventHandler(FileSystemEventHandler):
             return
 
         file_path = Path(event.src_path)
-        if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        if not is_allowed_file(file_path):
             return
 
         path_str = str(file_path)

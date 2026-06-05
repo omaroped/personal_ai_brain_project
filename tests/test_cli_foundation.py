@@ -1,9 +1,9 @@
+# MODULE: Tests for stable CLI behavior in query.py with mocked runtime dependencies.
 # MODULE: Tests for the CLI entry point query.py
 import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch, MagicMock
 from query import app
-from src.ingestion.vector_store import SearchResult
 
 runner = CliRunner()
 
@@ -59,10 +59,7 @@ def test_cli_search_validation():
 
 def test_cli_search_empty_results():
     """Verifies search output when no results are found."""
-    with patch("query.VectorStore") as mock_store_class:
-        mock_instance = mock_store_class.return_value
-        mock_instance.hybrid_search.return_value = []
-        
+    with patch("query._collect_results", return_value=[]):
         result = runner.invoke(app, ["search", "unknown query"])
         assert result.exit_code == 0
         assert "No results found" in result.stdout

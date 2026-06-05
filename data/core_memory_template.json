@@ -1,0 +1,19 @@
+{
+  "profile": {
+    "name": "Omar",
+    "psychology": {
+      "topics": ["Cognitive Science", "Behavioral Economics"],
+      "focus_areas": ["Mental Models", "Decision Making"]
+    },
+    "religion": {
+      "traditions": ["Islamic Philosophy", "Comparative Religion"],
+      "philosophies": ["Spirituality", "Ethics"]
+    },
+    "ai": {
+      "technologies": ["LLMs", "Pydantic", "Python"],
+      "research_areas": ["Autonomous Agents", "AI Alignment"]
+    },
+    "metadata": "Core profile for cross-domain AI assistance."
+  },
+  "version": "1.0.0"
+}

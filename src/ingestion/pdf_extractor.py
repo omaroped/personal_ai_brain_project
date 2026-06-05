@@ -10,6 +10,7 @@ from pathlib import Path
 
 import fitz
 
+from src.common.text_normalization import full_normalization
 from src.common.logging_utils import configure_logging
 
 REFERENCE_SECTION_PATTERN = re.compile(r"^(references|bibliography|works cited)\b", re.IGNORECASE)
@@ -87,6 +88,7 @@ class PDFExtractor:
                 if is_scanned:
                     page_text = self._extract_with_ocr(page, pdf_path, index)
 
+                page_text = full_normalization(page_text)
                 if not page_text:
                     continue
 

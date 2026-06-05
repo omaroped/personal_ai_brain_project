@@ -209,20 +209,6 @@ class VectorStore:
             self.embedder = Embedder()
         return self.embedder
 
-
-def default_table_paths() -> dict[str, Path]:
-    """Return the default logical table paths used by the project.
-
-    Returns:
-        dict[str, Path]: Mapping of standard table names to on-disk paths.
-    """
-    return {
-        "documents": VECTORDB_DIR / "documents",
-        "personal": VECTORDB_DIR / "personal",
-        "conversations": VECTORDB_DIR / "conversations",
-        "errors": VECTORDB_DIR / "errors",
-    }
-
     def _rrf_merge(self, list_a: list[dict], list_b: list[dict], k: int = 60) -> list[dict]:
         """Merge two ranked result lists using Reciprocal Rank Fusion.
 
@@ -290,3 +276,17 @@ def default_table_paths() -> dict[str, Path]:
             distance = float(row["_distance"])
             return 1.0 / (1.0 + max(distance, 0.0))
         return 0.0
+
+
+def default_table_paths() -> dict[str, Path]:
+    """Return the default logical table paths used by the project.
+
+    Returns:
+        dict[str, Path]: Mapping of standard table names to on-disk paths.
+    """
+    return {
+        "documents": VECTORDB_DIR / "documents",
+        "personal": VECTORDB_DIR / "personal",
+        "conversations": VECTORDB_DIR / "conversations",
+        "errors": VECTORDB_DIR / "errors",
+    }

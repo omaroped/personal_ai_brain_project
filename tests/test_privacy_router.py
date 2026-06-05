@@ -1,3 +1,4 @@
+# MODULE: Tests for privacy routing decisions and domain normalization behavior.
 """Tests for the privacy routing logic."""
 
 from __future__ import annotations
@@ -19,10 +20,10 @@ def test_normalize_domain() -> None:
 
 
 def test_cloud_allowance_for_sensitive_domains() -> None:
-    """Sensitive domains must never allow cloud routing."""
+    """Sensitive domains and disabled cloud mode must keep routing local."""
     assert is_cloud_allowed_for_domain("personal") is False
     assert is_cloud_allowed_for_domain("religion") is False
-    assert is_cloud_allowed_for_domain("anything_else") is True
+    assert is_cloud_allowed_for_domain("anything_else") is False
 
 
 def test_route_selection_auto() -> None:
@@ -48,7 +49,7 @@ def test_route_selection_explicit_cloud_blocked() -> None:
     decision = choose_model_route("religion", requested_route="cloud")
     assert decision.route == "local"
     assert decision.allow_cloud is False
-    assert "Privacy constraint" in decision.reason
+    assert "blocked by privacy policy" in decision.reason
 
 
 def test_route_selection_invalid_option() -> None:

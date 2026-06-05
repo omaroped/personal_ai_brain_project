@@ -1,3 +1,4 @@
+# MODULE: Tests for HTTP and filesystem health-check helpers with mocked dependencies.
 """Tests for the health check utilities with mocking."""
 
 from __future__ import annotations

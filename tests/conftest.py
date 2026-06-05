@@ -1,3 +1,4 @@
+# MODULE: Shared fixtures and configuration helpers for the repository test suite.
 """Shared fixtures and configuration for the test suite."""
 
 from __future__ import annotations

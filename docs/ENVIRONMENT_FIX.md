@@ -1,41 +1,16 @@
-# Environment Fix: Python Virtual Environment
+# Environment Fixes
 
-## Issue
-The checked-in `venv/` directory was created in an environment that may have different shared library paths or Python minor versions (e.g., Python 3.11 on a different host), leading to "shared library not found" errors when running `venv/bin/python`.
+## Dependency Issues
+- **Issue:** `rebuild_venv.sh` failed because `silero-vad==5.1.1` is not available on PyPI.
+- **Available Versions:** 5.0.1b2, 5.0.1b3, 5.1, 5.1.2, 6.0.0, 6.1.0, 6.2.0, 6.2.1.
+- **Recommended Fix:** Update `requirements.txt` to use `silero-vad==5.1.2` or `silero-vad>=5.1`.
 
-## Recommended Fix: Rebuild the Virtual Environment
+- **Issue:** `rebuild_venv.sh` failed because `letta-client==0.2.12` is not available on PyPI.
+- **Available Versions:** Many 0.1.x versions (up to 0.1.324) and 1.x versions.
+- **Recommended Fix:** Update `requirements.txt` to a valid version of `letta-client`, e.g., `0.1.212` (if that was the intent) or the latest stable 0.1.x version.
 
-Because virtual environments contain absolute paths and are tied to the host's system libraries, the most reliable way to fix a broken venv is to delete and recreate it.
+- **Issue:** `rebuild_venv.sh` failed because of a dependency conflict between `pyarrow==17.0.0` and `pylance 0.11.1` (from `lancedb`). `pylance` requires `pyarrow<15.0.1`.
+- **Recommended Fix:** Update `requirements.txt` to use a compatible version of `pyarrow`, e.g., `pyarrow==14.0.1`.
 
-### Step-by-Step Rebuild
-1. **Remove the existing venv:**
-   ```bash
-   rm -rf /home/omar/personal_ai_brain_project/venv
-   ```
-
-2. **Recreate the venv using the system Python 3.11:**
-   ```bash
-   python3.11 -m venv /home/omar/personal_ai_brain_project/venv
-   ```
-
-3. **Activate the new venv:**
-   ```bash
-   source /home/omar/personal_ai_brain_project/venv/bin/activate
-   ```
-
-4. **Install dependencies:**
-   ```bash
-   pip install --upgrade pip
-   pip install -r /home/omar/personal_ai_brain_project/requirements.txt
-   ```
-
-## Automated Rebuild Script
-A script has been provided at `scripts/rebuild_venv.sh` to automate this process.
-
-## Verification
-After rebuilding, verify the environment with:
-```bash
-source venv/bin/activate
-python --version  # Should be 3.11.x
-pytest --version  # Should run without library errors
-```
+## Python Version
+- Python 3.11 is present and `venv` module is working.

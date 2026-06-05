@@ -8,8 +8,8 @@
 
 **Phase:** 1 — The Vault
 **Active Spec:** `specs/phase1_vault.md`
-**Last Updated:** (not started yet)
-**Overall Progress:** 0%
+**Last Updated:** 2026-06-06
+**Overall Progress:** 70%
 
 ---
 
@@ -73,7 +73,7 @@
 
 ## Blocked Tasks
 
-(None yet — add here when a task is blocked with the reason)
+- **Task 1.0 / Runtime Validation** — The checked-in `venv/` points to an inaccessible Python 3.11 runtime, and the system `python3` in this shell does not provide `venv`, `pip`, or `pytest`. Code implementation is far along, but end-to-end validation is blocked until a working Python environment is restored.
 
 ---
 
@@ -91,4 +91,5 @@ Wait for my confirmation before writing any code.
 
 | Date | Tasks completed | Notes |
 |------|----------------|-------|
-| (not started) | — | — |
+| 2026-06-06 | Phase 1 implementation in progress | Core ingestion modules, CLI, and supporting tests/docs were added; runtime validation remains blocked by the Python environment. |
+| 2026-06-06 | Documentation and Missing Scripts | Created scripts/run_unit_subset.sh and 5 key documentation files (ENVIRONMENT_MATRIX.md, INGESTION_FLOW.md, PRIVACY_MODEL.md, VECTOR_STORE_NOTES.md, WATCHER_BEHAVIOR.md). |

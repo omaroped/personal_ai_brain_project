@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -33,7 +35,7 @@ async def root():
 @app.get("/health")
 async def health_status():
     """Return the health status of core dependencies."""
-    return {"health": collect_core_health()}
+    return {"health": [asdict(status) for status in collect_core_health()]}
 
 
 @app.get("/ingestion")

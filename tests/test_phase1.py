@@ -91,6 +91,20 @@ def test_watcher_rejects_unsupported_extension(tmp_path: Path) -> None:
     assert queue.empty() is True
 
 
+def test_watcher_uses_shared_file_type_rules(tmp_path: Path) -> None:
+    """Watcher should accept DOCX through the shared file-type helper."""
+    queue: Queue = Queue()
+    db_path = tmp_path / "ingestion_index.db"
+    state_store = IngestionStateStore(db_path=db_path)
+    handler = IngestionEventHandler(queue=queue, state_store=state_store)
+    file_path = tmp_path / "outline.docx"
+    file_path.write_bytes(b"docx placeholder")
+
+    handler.on_created(FakeFileEvent(file_path))
+
+    assert queue.get_nowait() == file_path
+
+
 def test_debounce_allows_processing_after_threshold(tmp_path: Path) -> None:
     """The debounce helper should allow processing after the threshold passes."""
     queue: Queue = Queue()
@@ -397,6 +411,7 @@ def test_pipeline_extract_pages_supports_markdown(tmp_path: Path) -> None:
     assert len(pages) == 1
     assert pages[0].document_title == "note"
     assert "Some content" in pages[0].text
+    assert "\t" not in pages[0].text
 
 
 def test_pipeline_skips_when_no_pages_are_extracted(tmp_path: Path) -> None:
@@ -481,6 +496,38 @@ def test_pipeline_private_chunk_routing_helper() -> None:
     assert pipeline._is_private_chunk(public_chunk) is False
 
 
+def test_pipeline_stop_clears_threads_and_requests_watcher_stop() -> None:
+    """Stopping the pipeline should signal the watcher and worker to exit."""
+    pipeline = IngestionPipeline.__new__(IngestionPipeline)
+    pipeline.logger = FakeLogger()
+    pipeline._stop_event = FakeStopEvent()
+    pipeline.watcher = FakeWatcher()
+    pipeline._worker_thread = None
+    pipeline._watcher_thread = None
+
+    pipeline.stop()
+
+    assert pipeline._stop_event.was_set is True
+    assert pipeline.watcher.stopped is True
+
+
+def test_pipeline_status_reports_queue_and_store_counts() -> None:
+    """Pipeline status should expose queue depth and current store counts."""
+    pipeline = IngestionPipeline.__new__(IngestionPipeline)
+    pipeline.queue = Queue()
+    pipeline.queue.put("one")
+    pipeline.watcher = FakeRunningWatcher()
+    pipeline.documents_store = FakeCountStore(3)
+    pipeline.personal_store = FakeCountStore(1)
+
+    status = pipeline.status()
+
+    assert status["queue_size"] == 1
+    assert status["watcher_running"] is True
+    assert status["documents_count"] == 3
+    assert status["personal_count"] == 1
+
+
 class FakeStateStore:
     """Simple ingestion state stub for pipeline tests."""
 
@@ -507,6 +554,58 @@ class FakeStateStore:
             file_hash: File hash to remember.
         """
         self.recorded_hashes.add(file_hash)
+
+
+class FakeStopEvent:
+    """Simple stop-event stub for pipeline stop tests."""
+
+    def __init__(self) -> None:
+        """Initialize the fake stop event."""
+        self.was_set = False
+
+    def set(self) -> None:
+        """Record that the stop event was triggered."""
+        self.was_set = True
+
+
+class FakeWatcher:
+    """Simple watcher stub for pipeline stop tests."""
+
+    def __init__(self) -> None:
+        """Initialize the fake watcher."""
+        self.stopped = False
+
+    def stop(self) -> None:
+        """Record that watcher stop was requested."""
+        self.stopped = True
+
+
+class FakeRunningWatcher:
+    """Simple watcher stub exposing a running flag for status checks."""
+
+    def __init__(self) -> None:
+        """Initialize the fake watcher as running."""
+        self._running = True
+
+
+class FakeCountStore:
+    """Simple store stub returning a fixed count."""
+
+    def __init__(self, count_value: int) -> None:
+        """Store a fixed count value.
+
+        Parameters:
+            count_value: Value returned by `count()`.
+        """
+        self.count_value = count_value
+
+    def count(self) -> int:
+        """Return the configured count value.
+
+        Returns:
+            int: Fixed row count.
+        """
+        return self.count_value
 
 
 class FakeStore:
@@ -751,3 +850,19 @@ def test_domain_tagging_accuracy(tmp_path: Path) -> None:
 
     assert chunks
     assert chunks[0].domain == "psychology"
+
+
+def test_pipeline_markdown_extraction_normalizes_whitespace(tmp_path: Path) -> None:
+    """Markdown extraction should normalize noisy whitespace before chunking."""
+    file_path = tmp_path / "messy.md"
+    file_path.write_text("## Note\r\nLine 1\t\tLine 2\r\n\r\n\r\nLine 3", encoding="utf-8")
+
+    pipeline = IngestionPipeline.__new__(IngestionPipeline)
+    pipeline.logger = FakeLogger()
+
+    pages = pipeline._extract_pages(file_path)
+
+    assert len(pages) == 1
+    assert "\r" not in pages[0].text
+    assert "\t" not in pages[0].text
+    assert "Line 1 Line 2" in pages[0].text
