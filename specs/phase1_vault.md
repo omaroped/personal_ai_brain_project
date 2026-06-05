@@ -1,20 +1,28 @@
-# Phase 1 Spec: The Vault
+# Phase 1 Spec: The Vault (v5.1 Deep)
 
 ## Goal
-A searchable local knowledge base that indexes Markdown and PDF files using semantic search (RAG).
+Build the data foundation: A recursive, semantic, local-first RAG knowledge base.
 
-## Components
-- **File Watcher:** Monitors `~/Documents` and `data/vault`.
-- **Chamber (Indexer):** Chunks text, generates embeddings via Ollama (nomic-embed-text), and stores in LanceDB.
-- **Query CLI:** A tool to search the knowledge base.
+## 1. File Watcher (`watchdog`)
+- **Folders:** `~/Documents`, `~/Downloads`, `data/vault`.
+- **Logic:** Debounce (2s delay), SQLite-backed deduplication (hash-based).
+- **Types:** .pdf, .md, .txt, .docx.
+
+## 2. Extraction & Chunking (`pymupdf`)
+- **Strategy:** Recursive Character Splitter (512 tokens, 15% overlap).
+- **Context Injection:** Prepend Doc title + Section + Page to metadata.
+- **OCR Fallback:** Use `pytesseract` (ara+eng) if page is image-only.
+- **Auto-Tagging:** Keyword-based domain classification (Psychology, Religion, etc.).
+
+## 3. Vector Database (`LanceDB`)
+- **Embedding:** `nomic-embed-text` via Ollama (Local).
+- **Hybrid Search:** Vector + BM25 (Full-Text Search) with Reciprocal Rank Fusion (RRF).
+- **Privacy:** `personal` and `religion` tables never touch cloud APIs.
 
 ## Tasks
-1. [x] Create directory structure.
-2. [ ] Write file watcher script using `watchdog`.
-3. [ ] Implement chunking (512 tokens, 50 overlap).
-4. [ ] Integrate `nomic-embed-text` via Ollama API.
-5. [ ] Store embeddings and metadata in local LanceDB.
-6. [ ] Build `query.py` with top-5 retrieval and source attribution.
-
-## Validation
-- Querying for specific terms found in existing university PDFs returns accurate snippets.
+1. [ ] Setup Python 3.11 Environment & Requirements.
+2. [ ] Implement File Watcher with Debounce logic.
+3. [ ] Build PDF/MD Extractor with `pymupdf`.
+4. [ ] Implement Recursive Chunking & Auto-Tagging.
+5. [ ] Integrate LanceDB with Hybrid Search (Vector+FTS).
+6. [ ] Build `query.py` CLI for validation.

@@ -1,20 +1,21 @@
-# Phase 2 Spec: The Memory Engine
+# Phase 2 Spec: The Memory Engine (v5.1 Deep)
 
 ## Goal
-Establish a persistent, tiered memory system that tracks user identity, learning progress, and past mistakes.
+Stateful continuity using the Letta (MemGPT) paradigm.
 
-## Components
-- **Letta (MemGPT) Runtime:** Manages agent state and memory paging.
-- **User Profile (Core Memory):** Structured JSON tracking domains (Psychology, Religion, etc.).
-- **Daily Review System:** Nightly consolidation of learning and logs.
+## 1. Letta Runtime
+- **Setup:** Docker-based Letta with local Ollama/Mistral-7B.
+- **Tiers:** Core (Active Persona), Recall (Postgres/pgvector), Archival (LanceDB).
 
-## Tasks
-1. [ ] Install and configure Letta with local Ollama.
-2. [ ] Define `omar_brain` agent with persistent core memory.
-3. [ ] Create `core_memory.json` template.
-4. [ ] Build `daily_review.py` for evening reflection.
-5. [ ] Implement background extraction (log -> profile update).
-6. [ ] Establish "Mistake Log" memory namespace.
+## 2. Core Memory Architecture
+- **Schema:** `core_memory.json` (Identity, Domains, Mistakes, Goals).
+- **Auto-Update:** Agent uses `core_memory_replace` to evolve the profile.
 
-## Validation
-- The system correctly recalls a personal fact or a past mistake mentioned in a previous session.
+## 3. Daily Review & Reflection
+- **Systemd Timer:** Trigger at 9 PM (Persistent).
+- **Consolidation:** Summarize day's activity into `data/logs/`.
+- **Extraction:** Update `core_memory.json` with learning progress.
+
+## 4. Mistake Tracker
+- **Namespace:** Dedicated Letta segments for errors + corrections.
+- **Pre-Task Check:** Automatic search for relevant past mistakes before new tasks.

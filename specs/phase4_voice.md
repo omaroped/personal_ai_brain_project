@@ -1,20 +1,22 @@
-# Phase 4 Spec: The Voice Layer
+# Phase 4 Spec: The Voice Layer (v5.1 Deep)
 
 ## Goal
-Enable natural, low-latency (sub-1.5s) voice interaction with the Digital Twin.
+Low-latency (1.2s-1.5s) voice interaction.
 
-## Components
-- **STT:** `whisper.cpp` (GPU accelerated).
-- **VAD:** `Silero VAD` for silence detection.
-- **TTS:** `Kokoro ONNX` for high-speed voice synthesis.
-- **Controller:** `listen.py` orchestrates the loop.
+## 1. STT: Faster-Whisper
+- **Engine:** `faster-whisper` (CTranslate2 optimized for NVIDIA).
+- **Model:** `base` (multilingual for Arabic/English).
+- **Target:** ~150ms transcription for 5s audio.
 
-## Tasks
-1. [ ] Install and GPU-optimize `whisper.cpp`.
-2. [ ] Benchmarking STT latency (<400ms).
-3. [ ] Set up persistent `Kokoro ONNX` server.
-4. [ ] Build the end-to-end `listen.py` loop.
-5. [ ] Integrate hotkey (Ctrl+Space) for trigger.
+## 2. VAD: Silero
+- **Engine:** `silero-vad` (CPU-based, 100ms window).
+- **Logic:** 0.8s silence threshold for end-of-speech detection.
 
-## Validation
-- Asking a voice question results in a spoken response in under 2 seconds.
+## 3. TTS: Kokoro ONNX
+- **Engine:** `kokoro-onnx` (CPU, streaming).
+- **Voice:** `af_bella` (Female, high quality).
+- **Target:** ~200ms first-token audio latency.
+
+## 4. Integration
+- **Hotkey:** Ctrl+Space via `pynput`.
+- **Pre-loading:** Models stay warm in memory.
