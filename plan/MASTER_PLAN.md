@@ -24,6 +24,11 @@ To build a "Personalized AI Operating System" that acts as a digital extension o
 * **Security:** Sandboxed Ubuntu containers (**Bytebot**) for executing scripts and browsing.
 * **Permissions:** Human-in-the-loop "Dry Run" mode for destructive actions.
 
+### D. System Grounding (Environmental Awareness)
+* **Hardware Profile:** Optimized for Ryzen 5 5600H + RTX 3060 (6GB VRAM). 
+* **Tool Mapping:** Native integration with existing `Ollama` and `VS Code` installations.
+* **Contextual Paths:** Full awareness of `/home/omar/` directory structure for autonomous file retrieval.
+
 ## 3. Implementation Roadmap
 * **Phase 1: Foundation (Weeks 1-2)**
     * Obsidian vault + AnythingLLM for basic RAG.
