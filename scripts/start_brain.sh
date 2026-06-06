@@ -4,12 +4,25 @@
 # ── Colors ────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 PROJECT_ROOT="/home/omar/personal_ai_brain_project"
 export PYTHONPATH=$PROJECT_ROOT
 
 cd "$PROJECT_ROOT"
+
+# Fast-fail runtime checks
+if [ ! -d "venv" ]; then
+    echo -e "${RED}Error: 'venv' directory not found.${NC}"
+    echo "Please run ./scripts/bootstrap.sh first."
+    exit 1
+fi
+
+if [ ! -f ".env" ]; then
+    echo -e "${YELLOW}Warning: .env file not found. Falling back to defaults.${NC}"
+fi
+
 source venv/bin/activate
 
 echo -e "${YELLOW}Starting AI Brain Health Check...${NC}"

@@ -10,20 +10,38 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 PROJECT_ROOT=$(pwd)
-PYTHON="python3.11"
+
+# Read required version from .python-version, defaulting to 3.10 if missing
+if [ -f "$PROJECT_ROOT/.python-version" ]; then
+    REQUIRED_PYTHON_VERSION=$(cat "$PROJECT_ROOT/.python-version" | tr -d '[:space:]')
+else
+    REQUIRED_PYTHON_VERSION="3.10.12"
+fi
+
+# Extract major.minor for the command
+PYTHON_CMD="python${REQUIRED_PYTHON_VERSION%.*}"
 
 echo -e "${GREEN}Starting Personal AI Brain Bootstrap...${NC}"
 
-# 1. Check Python version
-if ! command -v $PYTHON &>/dev/null; then
-    echo -e "${RED}✗ Python 3.11 is required. Please install it first.${NC}"
+# 1. Strict Python version check
+echo -n "Checking Python version ($REQUIRED_PYTHON_VERSION)... "
+if ! command -v $PYTHON_CMD &>/dev/null; then
+    echo -e "\n${RED}✗ $PYTHON_CMD is required. Please install it first.${NC}"
+    echo "  Suggested fix: sudo apt-get install $PYTHON_CMD $PYTHON_CMD-venv $PYTHON_CMD-dev"
     exit 1
+fi
+
+ACTUAL_VERSION=$($PYTHON_CMD -c 'import platform; print(platform.python_version())')
+if [ "$ACTUAL_VERSION" != "$REQUIRED_PYTHON_VERSION" ]; then
+    echo -e "\n${YELLOW}⚠ Warning: Found Python $ACTUAL_VERSION. Recommended is $REQUIRED_PYTHON_VERSION.${NC}"
+else
+    echo -e "${GREEN}OK ($ACTUAL_VERSION)${NC}"
 fi
 
 # 2. Setup Virtual Environment
 if [ ! -d "venv" ]; then
     echo -e "${YELLOW}Creating virtual environment...${NC}"
-    $PYTHON -m venv venv
+    $PYTHON_CMD -m venv venv
 fi
 
 source venv/bin/activate
