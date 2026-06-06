@@ -136,12 +136,12 @@ class FileWatcher:
         if self._running:
             return
 
+        self._running = True
         for watch_dir in self.watch_dirs:
             watch_dir.mkdir(parents=True, exist_ok=True)
             self.observer.schedule(self.event_handler, str(watch_dir), recursive=True)
 
         self.observer.start()
-        self._running = True
         self.logger.info("File watcher started for %d directories.", len(self.watch_dirs))
 
         try:

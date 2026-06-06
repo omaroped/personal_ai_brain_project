@@ -9,7 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
 
-from config import VAULT_DIR
+import ollama
+
+from config import VAULT_DIR, LOCAL_LLM_MODEL, OLLAMA_BASE_URL
 from src.common.file_types import ALLOWED_EXTENSIONS, get_file_type_label, is_allowed_file
 from src.common.logging_utils import configure_logging
 from src.common.text_normalization import full_normalization
@@ -40,6 +42,9 @@ class IngestionPipeline:
         self.documents_store = VectorStore("documents", embedder=self.embedder)
         self.personal_store = VectorStore("personal", embedder=self.embedder)
         self.state_store = IngestionStateStore()
+        self.ollama_client = ollama.Client(host=OLLAMA_BASE_URL)
+        self.summaries_dir = VAULT_DIR / "summaries"
+        self.summaries_dir.mkdir(parents=True, exist_ok=True)
         self._worker_thread: threading.Thread | None = None
         self._watcher_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
@@ -120,6 +125,13 @@ class IngestionPipeline:
             self.personal_store.add(personal_chunks, personal_vectors)
 
         self.state_store.record_file(filepath, file_hash)
+
+        # Generate and save summary
+        try:
+            self._generate_and_save_summary(filepath, pages)
+        except Exception as exc:
+            self.logger.warning("Summary generation failed for %s: %s", filepath, exc)
+
         elapsed = time.perf_counter() - started
         self.logger.info("✅ %s: %d chunks ingested in %.1fs", filepath.name, len(chunks), elapsed)
         return {
@@ -249,6 +261,62 @@ class IngestionPipeline:
                 "- **Fix applied:** None yet\n"
                 "- **Status:** UNRESOLVED\n"
             )
+
+    def _generate_and_save_summary(self, filepath: Path, pages: list[ExtractedPage]) -> None:
+        """Generate a 3-sentence summary and 3-5 key facts using Ollama, saving to vault/summaries."""
+        if not pages:
+            return
+
+        self.summaries_dir.mkdir(parents=True, exist_ok=True)
+        summary_file = self.summaries_dir / f"{filepath.stem}.md"
+        if summary_file.exists():
+            return
+
+        full_text = "\n".join(page.text for page in pages if page.text)
+        trimmed_text = full_text[:8000].strip()
+        if not trimmed_text:
+            self.logger.warning("No text to summarize for %s", filepath.name)
+            return
+
+        title = pages[0].document_title or filepath.stem
+        prompt = (
+            "You are a summarizing assistant for a Personal AI Brain.\n"
+            f"Summarize the following document titled '{title}'.\n"
+            "Format your output EXACTLY as follows:\n\n"
+            "## Summary\n"
+            "[A 3-sentence summary of the main points]\n\n"
+            "## Key Facts\n"
+            "- [Fact 1]\n"
+            "- [Fact 2]\n"
+            "- [Fact 3]\n\n"
+            "Do not include any introductory or concluding conversational text. Start directly with '## Summary'.\n\n"
+            f"Document text:\n{trimmed_text}"
+        )
+
+        max_retries = 3
+        retry_backoff_seconds = (1.0, 2.0, 4.0)
+        last_error: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                response = self.ollama_client.generate(
+                    model=LOCAL_LLM_MODEL,
+                    prompt=prompt,
+                    options={"temperature": 0.3}
+                )
+                summary_content = response.get("response", "").strip()
+                if not summary_content:
+                    raise ValueError("Empty response from Ollama")
+
+                summary_file.write_text(summary_content, encoding="utf-8")
+                self.logger.info("Saved summary for %s to %s", filepath.name, summary_file)
+                return
+            except Exception as exc:
+                last_error = exc
+                self.logger.warning("Summary generation attempt %d/%d failed: %s", attempt + 1, max_retries, exc)
+                if attempt < max_retries - 1:
+                    time.sleep(retry_backoff_seconds[attempt])
+
+        self.logger.error("Failed to generate summary for %s after %d attempts: %s", filepath.name, max_retries, last_error)
 
     def _is_private_chunk(self, chunk) -> bool:
         """Return whether a chunk must stay in the private local table.

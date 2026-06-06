@@ -12,8 +12,8 @@ echo "Stopping services if running..."
 echo "Removing old virtual environment at $VENV_DIR..."
 rm -rf "$VENV_DIR"
 
-echo "Creating new virtual environment with Python 3.11..."
-python3.11 -m venv "$VENV_DIR"
+echo "Creating new virtual environment with Python 3.10..."
+python3 -m venv "$VENV_DIR"
 
 echo "Activating venv and installing requirements..."
 source "$VENV_DIR/bin/activate"

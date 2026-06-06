@@ -1,35 +1,23 @@
-# STT
-faster-whisper==1.1.0
-
-# TTS
-kokoro-onnx==0.4.5
-
-# VAD
-silero-vad==5.1.2
-torch==2.3.1
-torchaudio==2.3.1
+# Phase 1 only: vault ingestion, search, docs, and offline-safe tests.
 
 # Vector DB
 lancedb==0.8.1
 pyarrow==14.0.1
 numpy<2
 
-# Memory
-letta-client==0.1.324
-
-# PDF parsing
+# PDF and document parsing
 pymupdf==1.24.14
 python-docx==1.1.2
 
-# File watch
+# File watching
 watchdog==4.0.2
 
-# API layer
+# API and schema
 fastapi==0.111.1
 uvicorn[standard]==0.30.6
 pydantic==2.8.2
 
-# Embeddings (Ollama client)
+# Embeddings client
 ollama==0.3.3
 
 # Utilities
@@ -50,20 +38,7 @@ pytest==8.3.2
 pytest-asyncio==0.23.8
 pytest-timeout==2.3.1
 
-# HTTP/Async
+# HTTP and async helpers
 httpx==0.27.2
 aiofiles==24.1.0
 packaging<26
-
-# YouTube transcription
-yt-dlp==2024.8.6
-
-# Cloud LLM
-anthropic==0.28.0
-
-# Voice additions
-sounddevice==0.4.6
-soundfile==0.12.1
-onnxruntime-gpu==1.18.0
-pynput==1.7.6
-

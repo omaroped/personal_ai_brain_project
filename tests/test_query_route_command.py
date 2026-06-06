@@ -54,4 +54,4 @@ def test_route_command_missing_argument() -> None:
     """The route command should fail if domain is missing."""
     result = runner.invoke(app, ["route"])
     assert result.exit_code != 0
-    assert "Missing argument" in result.stdout
+    assert "Missing argument" in (result.stdout or getattr(result, "stderr", ""))

@@ -2,9 +2,9 @@
 
 ## Overall Status
 - **Total Tasks:** 80
-- **Completed:** 27
+- **Completed:** 32
 - **In Progress:** 0
-- **Unclaimed:** 53
+- **Unclaimed:** 48
 
 ## Task Status Table
 
@@ -12,9 +12,9 @@
 |---|---|---|---|---|
 | 1 | Create tests/test_pdf_extractor_real_fixture.py | Unclaimed | - | Awaiting valid PDF fixture |
 | 2 | Create tests/test_chunker.py | COMPLETED | Main | Lead-owned chunker coverage added. |
-| 3 | Create tests/test_embedder.py | COMPLETED | Support | 12 tests passing. |
-| 4 | Create tests/test_pipeline.py | COMPLETED | Support | Integration logic covered. |
-| 5 | Create tests/test_watcher.py | COMPLETED | Support | Handler behavior verified. |
+| 3 | Create tests/test_embedder.py | COMPLETED | Support | File exists; lead tightened assertions to fit the current embedder. |
+| 4 | Create tests/test_pipeline.py | COMPLETED | Support | File exists; lead cleaned it to match the current pipeline. |
+| 5 | Create tests/test_watcher.py | COMPLETED | Support | File exists; still awaits real pytest execution in this shell. |
 | 6 | Create tests/test_dashboard.py | Unclaimed | - | |
 | 7 | Create tests/test_file_types.py | COMPLETED | Support | Helper validation added. |
 | 8 | Create tests/test_text_normalization.py | COMPLETED | Support | Cleaning logic verified. |
@@ -35,7 +35,7 @@
 | 23 | Create tests/test_query_route_command.py | COMPLETED | Support | Privacy routing CLI verified. |
 | 24 | Create docs/CLI_USAGE.md | Unclaimed | - | |
 | 25 | Create docs/QUERY_EXAMPLES.md | Unclaimed | - | |
-| 26 | Create tests/test_query_rendering.py | Unclaimed | - | |
+| 26 | Create tests/test_query_rendering.py | COMPLETED | Main | Lead added focused output-rendering coverage for query results. |
 | 27 | Create codex/QUERY_IMPROVEMENTS.md | Unclaimed | - | |
 | 28 | Create sample_psychology_note.md | Unclaimed | - | |
 | 29 | Create sample_religion_note.md | Unclaimed | - | |
@@ -48,10 +48,10 @@
 | 36 | Create sample_multi_section.md | Unclaimed | - | |
 | 37 | Create sample_pdf_heading_plan.md | Unclaimed | - | |
 | 38 | Update tests/fixtures/README.md (categorization) | Unclaimed | - | |
-| 39 | Create docs/INGESTION_FLOW.md | Unclaimed | - | |
-| 40 | Create docs/PRIVACY_MODEL.md | Unclaimed | - | |
-| 41 | Create docs/VECTOR_STORE_NOTES.md | Unclaimed | - | |
-| 42 | Create docs/WATCHER_BEHAVIOR.md | Unclaimed | - | |
+| 39 | Create docs/INGESTION_FLOW.md | COMPLETED | Support | File exists; doc may drift as ingestion code changes. |
+| 40 | Create docs/PRIVACY_MODEL.md | COMPLETED | Support | File exists. |
+| 41 | Create docs/VECTOR_STORE_NOTES.md | COMPLETED | Support | File exists. |
+| 42 | Create docs/WATCHER_BEHAVIOR.md | COMPLETED | Support | File exists. |
 | 43 | Create docs/ERROR_HANDLING.md | COMPLETED | Support | Standard pattern documented. |
 | 44 | Create docs/CONFIG_REFERENCE.md | COMPLETED | Support | Config values documented. |
 | 45 | Create docs/DEPENDENCY_NOTES.md | Unclaimed | - | |

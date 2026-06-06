@@ -17,66 +17,10 @@ from config import (
     CHUNK_SIZE_LECTURE,
     CHUNK_SIZE_RELIGIOUS,
 )
+from src.ingestion.auto_tagger import AutoTagger
 from src.ingestion.pdf_extractor import ExtractedPage
 
-DOMAIN_KEYWORDS = {
-    "psychology": [
-        "Freud",
-        "ego",
-        "cognitive",
-        "behavioral",
-        "therapy",
-        "schema",
-        "attachment",
-        "neuroscience",
-        "memory",
-        "perception",
-    ],
-    "religion": [
-        "Allah",
-        "Quran",
-        "Qur'an",
-        "hadith",
-        "tafsir",
-        "fiqh",
-        "theology",
-        "Islamic",
-        "prayer",
-        "salah",
-        "sunnah",
-    ],
-    "ai_tech": [
-        "neural",
-        "transformer",
-        "embedding",
-        "gradient",
-        "model",
-        "algorithm",
-        "dataset",
-        "training",
-        "inference",
-        "LLM",
-    ],
-    "education": [
-        "lecture",
-        "exam",
-        "assignment",
-        "university",
-        "course",
-        "semester",
-        "syllabus",
-        "module",
-        "professor",
-    ],
-    "personal": [
-        "today",
-        "I feel",
-        "my goal",
-        "I made a mistake",
-        "I learned",
-        "tomorrow I will",
-    ],
-}
+# DOMAIN_KEYWORDS vocabulary list is moved to auto_tagger.py
 
 MARKDOWN_HEADING_PATTERN = re.compile(r"^(#{2,3})\s+(.*)$", re.MULTILINE)
 
@@ -119,6 +63,10 @@ class _Section:
 class Chunker:
     """Split extracted documents into structurally informed, overlap-preserving chunks."""
 
+    def __init__(self) -> None:
+        """Initialize the Chunker with a standalone AutoTagger."""
+        self.tagger = AutoTagger()
+
     def chunk(self, pages: list[ExtractedPage], filepath: Path) -> list[Chunk]:
         """Chunk a sequence of extracted pages into retrieval-ready units.
 
@@ -132,13 +80,13 @@ class Chunker:
         if not pages:
             return []
 
-        content_type = self._detect_content_type("\n".join(page.text for page in pages), filepath)
+        content_type = self.tagger.detect_content_type("\n".join(page.text for page in pages), filepath)
         sections = self._split_structural_sections(pages, filepath)
 
         chunks: list[Chunk] = []
         chunk_index = 0
         for section in sections:
-            domain = self._detect_domain(section.text)
+            domain = self.tagger.detect_domain(section.text)
             chunk_size, overlap = self._get_chunk_size(domain, content_type)
             splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size,
@@ -168,47 +116,7 @@ class Chunker:
                 chunk_index += 1
         return chunks
 
-    def _detect_domain(self, text: str) -> str:
-        """Assign a domain based on keyword frequency.
 
-        Parameters:
-            text: Text to classify.
-
-        Returns:
-            str: Best-matching domain label, or `general`.
-        """
-        lowered = text.lower()
-        best_domain = "general"
-        best_score = 0
-        for domain, keywords in DOMAIN_KEYWORDS.items():
-            score = sum(lowered.count(keyword.lower()) for keyword in keywords)
-            if score > best_score:
-                best_score = score
-                best_domain = domain
-        return best_domain
-
-    def _detect_content_type(self, text: str, filepath: Path) -> str:
-        """Infer a coarse content type from the file and its text.
-
-        Parameters:
-            text: Combined document text.
-            filepath: Source file path.
-
-        Returns:
-            str: Content type such as `book`, `article`, `transcript`, or `note`.
-        """
-        lowered = text.lower()
-        suffix = filepath.suffix.lower()
-
-        if "transcript" in lowered or "speaker" in lowered or "minute" in lowered:
-            return "transcript"
-        if suffix == ".md":
-            return "note"
-        if "journal" in lowered or "abstract" in lowered:
-            return "article"
-        if "chapter" in lowered or suffix == ".pdf":
-            return "book"
-        return "note"
 
     def _get_chunk_size(self, domain: str, content_type: str) -> tuple[int, int]:
         """Return chunk size and overlap for the document profile.

@@ -159,3 +159,8 @@ data/logs/*.md
 # Project specific
 data/vectordb/
 data/ingestion_index.db
+data/models/
+data/*.json
+*.wav
+assert
+.venv_local/

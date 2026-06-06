@@ -48,7 +48,7 @@ def test_cli_argument_validation() -> None:
     """The CLI should fail when required arguments are missing."""
     result = runner.invoke(app, ["route"])  # Missing domain
     assert result.exit_code != 0
-    assert "Missing argument" in result.stdout
+    assert "Missing argument" in (result.stdout or getattr(result, "stderr", ""))
 
 
 def test_search_command_renders_results_table() -> None:

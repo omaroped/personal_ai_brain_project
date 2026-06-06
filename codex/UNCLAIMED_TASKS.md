@@ -17,12 +17,7 @@
 
 - [ ] **Task 24:** Create `docs/CLI_USAGE.md` documenting query.py commands and direct legacy usage.
 - [ ] **Task 25:** Create `scripts/demo_query_usage.md` or `docs/QUERY_EXAMPLES.md` with realistic search examples.
-- [ ] **Task 26:** Create `tests/test_query_rendering.py` for output formatting assumptions using mocked results.
 - [ ] **Task 27:** Create a small patch proposal in `codex/QUERY_IMPROVEMENTS.md` for future CLI enhancements.
-- [ ] **Task 39:** Create `docs/INGESTION_FLOW.md` with the exact step order and failure points.
-- [ ] **Task 40:** Create `docs/PRIVACY_MODEL.md` documenting public vs private table routing.
-- [ ] **Task 41:** Create `docs/VECTOR_STORE_NOTES.md` explaining schema, FTS, RRF, and scoring.
-- [ ] **Task 42:** Create `docs/WATCHER_BEHAVIOR.md` covering debounce, duplicate hashes, and retry semantics.
 
 ## Priority P3: Hygiene & Catalogs
 

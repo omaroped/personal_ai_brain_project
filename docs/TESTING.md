@@ -11,7 +11,7 @@ Tests are categorized by their environmental requirements. Use these categories 
 |---|---|---|---|
 | **Offline** | None | Core logic, utilities, and unit tests. Fast and safe to run anywhere. | `test_foundation.py`, `test_chunker.py`, `test_privacy_router.py` |
 | **Ollama-required** | Ollama API | Integration tests involving embeddings or LLM responses. | `test_embedder.py`, `test_phase1.py`, `test_query_cli.py` |
-| **Docker-required** | Docker Compose | System-wide integration tests involving Letta, LanceDB, or full service stacks. | `test_watcher.py`, `test_pipeline.py` |
+| **Docker-required** | Docker Compose | System-wide integration tests involving Letta or a full local service stack. | `test_phase2.py` |
 
 ## Running Tests
 
@@ -19,7 +19,7 @@ Tests are categorized by their environmental requirements. Use these categories 
 To run the core logic tests that do not require external services:
 ```bash
 source venv/bin/activate
-pytest tests/test_foundation.py tests/test_parallel_foundations.py tests/test_privacy_router.py tests/test_ingestion_state.py tests/test_health_checks.py tests/test_logging_utils.py
+pytest tests/test_foundation.py tests/test_parallel_foundations.py tests/test_privacy_router.py tests/test_ingestion_state.py tests/test_health_checks.py tests/test_logging_utils.py tests/test_watcher.py tests/test_file_types.py tests/test_text_normalization.py
 ```
 
 ### 2. Full Suite (Requires Services)
@@ -27,6 +27,9 @@ Some tests (like `test_phase1.py`) require local services to be running.
 
 | Test File | Requires Ollama | Requires Letta | Requires Docker |
 |---|---|---|---|
+| `tests/test_embedder.py` | Sometimes | No | No |
+| `tests/test_pipeline.py` | No | No | No |
+| `tests/test_watcher.py` | No | No | No |
 | `tests/test_phase1.py` | Yes | No | No |
 | `tests/test_phase2.py` | Yes | Yes | Yes |
 

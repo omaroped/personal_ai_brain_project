@@ -288,6 +288,21 @@ class FakeEmbeddingsClient:
         return {"embedding": [float(len(prompt)), 1.0, 2.0]}
 
 
+class FakeEmbedder:
+    """Minimal embedder stub exposing the `embed()` API used by VectorStore."""
+
+    def embed(self, text: str) -> list[float]:
+        """Return a deterministic embedding vector for one query string.
+
+        Parameters:
+            text: Query text to embed.
+
+        Returns:
+            list[float]: Deterministic fake vector.
+        """
+        return [float(len(text)), 1.0, 2.0]
+
+
 class FakeBatchClient(FakeEmbeddingsClient):
     """Fake Ollama client exposing a batch embedding API."""
 
@@ -543,20 +558,20 @@ def test_pipeline_status_reports_queue_and_store_counts() -> None:
 class FakeStateStore:
     """Simple ingestion state stub for pipeline tests."""
 
-    def has_hash(self, file_hash: str) -> bool:
-        """Return False so the pipeline proceeds in tests.
-
-        Parameters:
-            file_hash: Ignored hash value.
-
-        Returns:
-            bool: Always False.
-        """
-        return False
-
     def __init__(self) -> None:
         """Initialize the fake state store."""
         self.recorded_hashes: set[str] = set()
+
+    def has_hash(self, file_hash: str) -> bool:
+        """Return whether the hash has already been recorded.
+
+        Parameters:
+            file_hash: Hash value to check.
+
+        Returns:
+            bool: True when the hash was recorded earlier.
+        """
+        return file_hash in self.recorded_hashes
 
     def record_file(self, file_path: Path, file_hash: str) -> None:
         """Store a file hash in the fake state store.
@@ -809,7 +824,7 @@ def test_arabic_pdf_extraction(monkeypatch, tmp_path: Path) -> None:
 def test_hybrid_search_finds_known_content() -> None:
     """Hybrid search should surface known content as the top hit."""
     store = VectorStore.__new__(VectorStore)
-    store.embedder = FakeEmbeddingsClient()
+    store.embedder = FakeEmbedder()
     store.table = FakeHybridTable(
         vector_rows=[
             {

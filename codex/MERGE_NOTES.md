@@ -46,6 +46,18 @@ Format:
 - Assumptions: Documentation follows established project standards for transparency and failure tracking.
 - Follow-up: Phase 1 ingestion modules should be audited against the error handling template before Phase 2.
 
+## 2026-06-06 — Supporting Agent: Final Project Foundation Wrap-up
+- Files: `scripts/smoke_test_ingestion.py`, `docs/ENVIRONMENT_FIX.md`, `plan/ARCHITECTURE.md`, `codex/AGENT_ASSIGNMENTS.md`
+- Summary: Completed all 20 assigned foundation tasks, including environment repair guidance, smoke tests, and final architectural review.
+- Assumptions: System Python 3.11 is available for venv recreation.
+- Follow-up: Handover to lead agent for Phase 1 completion (chunking/embedding/pipeline).
+
+## 2026-06-06 — Supporting Agent: Repository Cleanup and Smoke Test
+- Files: `scripts/smoke_test_ingestion.py`
+- Summary: Removed duplicate constitution/spec files and added an end-to-end ingestion smoke test script.
+- Assumptions: Embedding step in smoke test requires local Ollama service.
+- Follow-up: Re-run smoke test after environment is successfully repaired.
+
 ## 2026-06-06 — Supporting Agent: Test Scaffold, Fixtures, and Docs (Batch)
 - Files: `tests/test_query_cli.py`, `tests/test_privacy_router.py`, `tests/test_ingestion_state.py`, `tests/test_vector_store.py`, `tests/test_health_checks.py`, `tests/test_logging_utils.py`, `tests/conftest.py`, `tests/fixtures/*`, `docs/TESTING.md`, `docs/OPERATIONS.md`
 - Summary: Delivered a comprehensive test suite covering core foundation logic, reusable fixtures, and detailed guides for testing and operations.

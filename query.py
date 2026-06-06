@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import sys
-from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -17,6 +16,17 @@ from src.ingestion.vector_store import SearchResult, VectorStore
 
 app = typer.Typer(help="Operate and inspect the Personal AI Brain project.")
 console = Console()
+
+
+def _fail_cli(message: str, code: int = 2) -> None:
+    """Print a CLI validation error and exit with a non-zero status.
+
+    Parameters:
+        message: Human-readable validation message.
+        code: Process exit status.
+    """
+    console.print(message)
+    raise typer.Exit(code=code)
 
 
 def _collect_results(
@@ -70,11 +80,13 @@ def _render_search_results(query_text: str, results: list[tuple[str, SearchResul
         return
 
     unique_tables = {table_name for table_name, _ in results}
+    unique_sources = list(dict.fromkeys(result.source_file for _, result in results))
     console.print(f'Query: "{query_text}"')
     if len(unique_tables) == 1:
         console.print(f"Results from: {next(iter(unique_tables))} table")
     else:
         console.print("Results from: multiple tables")
+    console.print(f"Sources: {', '.join(unique_sources)}")
 
     table = Table(title=f"Search Results: {query_text}")
     table.add_column("#")
@@ -120,8 +132,8 @@ def health() -> None:
 
 @app.command()
 def route(
-    domain: Annotated[str, typer.Argument(help="Domain to evaluate.")],
-    requested_route: Annotated[str, typer.Option("--requested-route", help="auto, local, or cloud.")] = "auto",
+    domain: str = typer.Argument(..., help="Domain to evaluate."),
+    requested_route: str = typer.Option("auto", "--requested-route", help="auto, local, or cloud."),
 ) -> None:
     """Show the resolved privacy route for a domain."""
     decision = choose_model_route(domain=domain, requested_route=requested_route)
@@ -137,30 +149,30 @@ def route(
 
 @app.command()
 def search(
-    query_text: Annotated[str, typer.Argument(help="Query text to search for.")],
-    domain: Annotated[str | None, typer.Option("--domain", help="Optional domain filter.")] = None,
-    table_name: Annotated[str, typer.Option("--table", help="documents, personal, or all.")] = "all",
-    mode: Annotated[str, typer.Option("--mode", help="hybrid or vector.")] = "hybrid",
-    top_k: Annotated[int, typer.Option("--top-k", "--top", help="Maximum number of results.")] = 5,
+    query_text: str = typer.Argument(..., help="Query text to search for."),
+    domain: str | None = typer.Option(None, "--domain", help="Optional domain filter."),
+    table_name: str = typer.Option("all", "--table", help="documents, personal, or all."),
+    mode: str = typer.Option("hybrid", "--mode", help="hybrid or vector."),
+    top_k: int = typer.Option(5, "--top-k", "--top", help="Maximum number of results."),
 ) -> None:
     """Search the vector store and print ranked retrieval results."""
     if table_name not in {"documents", "personal", "all"}:
-        raise typer.BadParameter("table must be one of: documents, personal, all")
+        _fail_cli("table must be one of: documents, personal, all")
     if mode not in {"hybrid", "vector"}:
-        raise typer.BadParameter("mode must be one of: hybrid, vector")
+        _fail_cli("mode must be one of: hybrid, vector")
     if top_k < 1:
-        raise typer.BadParameter("top-k must be >= 1")
+        _fail_cli("top-k must be >= 1")
     results = _collect_results(query_text, domain, table_name, mode, top_k)
     _render_search_results(query_text, results)
 
 
 @app.command()
 def count(
-    table_name: Annotated[str, typer.Option("--table", help="documents, personal, or all.")] = "all",
+    table_name: str = typer.Option("all", "--table", help="documents, personal, or all."),
 ) -> None:
     """Show stored row counts for one or more vector tables."""
     if table_name not in {"documents", "personal", "all"}:
-        raise typer.BadParameter("table must be one of: documents, personal, all")
+        _fail_cli("table must be one of: documents, personal, all")
 
     table_names = ["documents", "personal"] if table_name == "all" else [table_name]
     table = Table(title="Vector Store Counts")
