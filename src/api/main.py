@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
-from fastapi import FastAPI, HTTPException, Query, Request, Form
+from fastapi import FastAPI, HTTPException, Query, Request, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import sounddevice as sd
+import json
+import time
 
 import config
 from src.common.logging_utils import configure_logging
@@ -18,8 +20,9 @@ from src.common.health import collect_core_health
 from src.api.privacy_router import choose_model_route
 from src.ingestion.vector_store import VectorStore
 from src.memory.letta_agent import OmarBrainAgent
-from src.common.audio_utils import list_input_devices
-import json
+from src.memory.openclaw_agent import OpenClawAgent
+from src.agents.planner import TaskPlanner
+from src.api.ws_manager import manager as ws_manager
 
 # Import existing routers/apps
 from src.ingestion.web_endpoint import app as ingestion_app
@@ -35,8 +38,97 @@ templates = Jinja2Templates(directory="src/api/templates")
 # Mount specialized APIs
 app.mount("/ingest", ingestion_app)
 
-# Persistent Letta agent instance
+# Global Agents
 letta_agent = OmarBrainAgent()
+openclaw_agent = OpenClawAgent()
+task_planner = TaskPlanner()
+
+class IdentityManager:
+    """Centralizes routing logic previously tangled in the voice pipeline."""
+    @staticmethod
+    def handle_input(transcript: str) -> str:
+        # Check if it's an action command
+        action_keywords = ["open", "search", "find", "summarize", "read", "run", "execute", "notify", "remind", "delegate"]
+        first_word = transcript.split()[0].lower() if transcript else ""
+        is_action = first_word in action_keywords or "open" in transcript.lower()
+
+        if is_action:
+            LOGGER.info("Action detected. Routing to Task Planner: '%s'", transcript)
+            goal = f"The user just said via voice: '{transcript}'. Execute tools if necessary and return a spoken summary."
+            return task_planner.execute(goal)
+
+        # Read settings
+        turbo_mode = False
+        openclaw_mode = True
+        if config.SETTINGS_FILE.exists():
+            try:
+                with open(config.SETTINGS_FILE, "r") as f:
+                    settings = json.load(f)
+                    turbo_mode = settings.get("turbo", False)
+                    openclaw_mode = settings.get("openclaw", True)
+            except Exception: pass
+
+        # OpenClaw
+        if openclaw_mode:
+            response = openclaw_agent.send_message(transcript)
+            if "Error:" not in response and "trouble connecting" not in response:
+                return response
+            LOGGER.warning("OpenClaw bypass failed: %s", response)
+
+        # Gemini
+        if turbo_mode and config.GEMINI_API_KEY:
+            LOGGER.info("Turbo Mode active. Routing to Gemini...")
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=config.GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                return model.generate_content(transcript).text
+            except Exception as e:
+                LOGGER.error("Gemini Turbo failed: %s", e)
+
+        # Letta
+        return letta_agent.send_message(transcript)
+
+@app.websocket("/ws/voice")
+async def websocket_voice_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for the decoupled Voice Daemon."""
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            # Expecting JSON: {"type": "transcript", "text": "Hello"}
+            data = await websocket.receive_text()
+            payload = json.loads(data)
+
+            if payload.get("type") == "transcript":
+                transcript = payload.get("text", "")
+                LOGGER.info("Received transcript via WS: %s", transcript)
+
+                await ws_manager.broadcast_status("thinking")
+
+                # Process through IdentityManager
+                start_query = time.perf_counter()
+                response_text = IdentityManager.handle_input(transcript)
+                duration_query = (time.perf_counter() - start_query) * 1000
+
+                LOGGER.info("Brain responded: '%s' [%.2fms]", response_text, duration_query)
+
+                # Send response back to daemon to play
+                await websocket.send_text(json.dumps({
+                    "type": "tts_response",
+                    "text": response_text
+                }))
+
+                # Send back to idle state
+                await ws_manager.broadcast_status("idle")
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception as e:
+        LOGGER.error("WebSocket error: %s", e)
+        ws_manager.disconnect(websocket)
+
+@app.get("/", response_class=HTMLResponse)
+
 
 class BrainRequest(BaseModel):
     """Input for conversational brain queries."""
