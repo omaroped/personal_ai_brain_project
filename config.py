@@ -26,6 +26,7 @@ WATCH_DIRS = [
 
 INGESTION_INDEX_DB = DATA_DIR / "ingestion_index.db"
 LOG_FILE = DATA_DIR / "logs" / "brain.log"
+SETTINGS_FILE = DATA_DIR / "settings.json"
 
 LANCEDB_DOCUMENTS = VECTORDB_DIR / "documents"
 LANCEDB_PERSONAL = VECTORDB_DIR / "personal"
@@ -52,8 +53,10 @@ CHUNK_OVERLAP_LECTURE = 60
 CLOUD_BLOCKED_DOMAINS = {"personal", "religion"}
 
 LETTA_AGENT_NAME = "omar_brain"
+OPENCLAW_BASE_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:18789")
 LETTA_SERVER_PASSWORD = os.getenv("LETTA_SERVER_PASSWORD", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 ENABLE_CLOUD_MODELS = os.getenv("ENABLE_CLOUD_MODELS", "false").lower() == "true"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -74,6 +77,38 @@ def ensure_directories() -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
+def validate_environment() -> bool:
+    """Check if critical external services (Ollama, Letta) are reachable."""
+    import httpx
+    
+    services = {
+        "Ollama": OLLAMA_BASE_URL,
+        "Letta": LETTA_BASE_URL,
+    }
+    
+    all_ok = True
+    print("\n--- Environment Validation ---")
+    for name, url in services.items():
+        try:
+            # Quick health ping
+            endpoint = f"{url}/api/tags" if name == "Ollama" else f"{url}/health"
+            resp = httpx.get(endpoint, timeout=2.0)
+            if resp.status_code in (200, 404): # Letta might return 404 on /health if not configured
+                print(f"  ✓ {name} is reachable.")
+            else:
+                print(f"  ✗ {name} returned status {resp.status_code}.")
+                all_ok = False
+        except Exception as exc:
+            print(f"  ✗ {name} is OFFLINE ({exc}).")
+            all_ok = False
+    
+    if not all_ok:
+        print("\n  [!] Warning: Core services are missing. Run 'docker-compose up -d' first.\n")
+    
+    return all_ok
+
+
 if __name__ == "__main__":
     ensure_directories()
+    validate_environment()
     print("Configuration directories verified.")

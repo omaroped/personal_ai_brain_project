@@ -1,0 +1,14 @@
+[Unit]
+Description=Personal AI Brain Proactive Monitor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/omar/personal_ai_brain_project
+Environment=PYTHONPATH=/home/omar/personal_ai_brain_project
+ExecStart=/home/omar/personal_ai_brain_project/venv/bin/python3 src/agents/proactive.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

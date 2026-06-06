@@ -13,11 +13,28 @@ services:
     volumes:
       - letta_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8283/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8283/v1/health/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 20s
+
+  bytebot:
+    image: bytebot/bytebot:latest
+    container_name: brain_bytebot
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    ports:
+      - "9992:9992"
+    volumes:
+      - ../data/sandbox_output:/output
+    networks:
+      - bytebot_isolated
+
+networks:
+  bytebot_isolated:
+    driver: bridge
 
 volumes:
   letta_pgdata:

@@ -101,6 +101,8 @@ class TextToSpeechService:
 
         import re
         import time
+        import threading
+        import queue
 
         # Split into sentences (keeping punctuation)
         sentences = re.split(r"(?<=[.!?])\s+", text)
@@ -109,29 +111,48 @@ class TextToSpeechService:
         if not sentences:
             return 0.0
 
+        audio_queue = queue.Queue()
         first_byte_latency = 0.0
         start_time = time.perf_counter()
 
+        def synthesize_worker():
+            try:
+                for sentence in sentences:
+                    samples, sample_rate = self.kokoro.create(
+                        sentence,
+                        voice=self.voice_name,
+                        speed=1.0,
+                        lang="en-us",
+                    )
+                    audio_queue.put((samples, sample_rate))
+            except Exception as exc:
+                LOGGER.error("Synthesis worker failed: %s", exc)
+            finally:
+                audio_queue.put(None)  # Sentinel
+
+        synth_thread = threading.Thread(target=synthesize_worker, daemon=True)
+        synth_thread.start()
+
         try:
             LOGGER.info("Starting streaming audio playback (%d segments)...", len(sentences))
-            # Synthesis and playback first sentence immediately
-            for i, sentence in enumerate(sentences):
-                samples, sample_rate = self.kokoro.create(
-                    sentence,
-                    voice=self.voice_name,
-                    speed=1.0,
-                    lang="en-us",
-                )
+            first = True
+            while True:
+                item = audio_queue.get()
+                if item is None:
+                    break
                 
-                if i == 0:
+                samples, sample_rate = item
+                
+                if first:
                     first_byte_latency = (time.perf_counter() - start_time) * 1000
                     LOGGER.debug("First segment ready in %.2fms", first_byte_latency)
+                    first = False
                 
-                if i > 0:
-                    sd.wait()
-                
+                # Wait for previous playback to finish before starting next
+                sd.wait()
                 sd.play(samples, sample_rate)
             
+            # Wait for final segment
             sd.wait()
             LOGGER.info("Audio playback complete.")
         except Exception as exc:

@@ -86,33 +86,35 @@ class SpeechToTextService:
         self.model.transcribe(warmup_audio)
         LOGGER.info("STT model warmed up successfully.")
 
-    def transcribe_bytes(self, audio_bytes: bytes) -> str:
+    def transcribe_bytes(self, audio_bytes: bytes, language: str | None = None) -> tuple[str, any]:
         """Transcribe an in-memory WAV byte stream.
 
         Parameters:
             audio_bytes: In-memory WAV file bytes.
+            language: Optional language code (e.g. 'en', 'ar').
 
         Returns:
-            str: Transcribed text transcript.
+            tuple[str, any]: (Transcribed text, info object)
         """
         if not audio_bytes:
-            return ""
+            return "", None
 
         if self.model is None:
             self.warmup()
 
         try:
             audio_array = wav_bytes_to_float32(audio_bytes)
-            return self._transcribe(audio_array)
+            return self._transcribe(audio_array, language=language)
         except Exception as exc:
             LOGGER.error("Error transcribing audio bytes: %s", exc)
-            return ""
+            return "", None
 
-    def transcribe_file(self, audio_path: Path) -> str:
+    def transcribe_file(self, audio_path: Path, language: str | None = None) -> str:
         """Transcribe an audio file saved on disk.
 
         Parameters:
             audio_path: Path to the audio file.
+            language: Optional language code.
 
         Returns:
             str: Transcribed text transcript.
@@ -125,13 +127,14 @@ class SpeechToTextService:
             self.warmup()
 
         try:
-            segments, _ = self.model.transcribe(str(audio_path), beam_size=5)
+            segments, _ = self.model.transcribe(str(audio_path), beam_size=5, language=language)
             return "".join(segment.text for segment in segments).strip()
         except Exception as exc:
             LOGGER.error("Error transcribing file %s: %s", audio_path, exc)
             return ""
 
-    def _transcribe(self, audio_array: np.ndarray) -> str:
+    def _transcribe(self, audio_array: np.ndarray, language: str | None = None) -> tuple[str, any]:
         """Helper to call transcribe on a float32 numpy array."""
-        segments, _ = self.model.transcribe(audio_array, beam_size=5)
-        return "".join(segment.text for segment in segments).strip()
+        segments, info = self.model.transcribe(audio_array, beam_size=5, language=language)
+        text = "".join(segment.text for segment in segments).strip()
+        return text, info

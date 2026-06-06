@@ -20,7 +20,7 @@ class VoiceActivityDetector:
 
     def __init__(
         self,
-        threshold: float = 0.5,
+        threshold: float = 0.3,
         sample_rate: int = 16000,
         chunk_size: int = 512,
         silence_duration_sec: float = 1.0,
@@ -42,6 +42,7 @@ class VoiceActivityDetector:
         self.device_index = device_index
         self.model: torch.jit.ScriptModule | None = None
         self.is_running = False
+        self.is_paused = False
         self._audio_queue: queue.Queue[np.ndarray] = queue.Queue()
         self._stream = None
 
@@ -74,11 +75,15 @@ class VoiceActivityDetector:
         # 2. Setup audio queue and sounddevice stream
         self._audio_queue = queue.Queue()
         self.is_running = True
+        self.is_paused = False
 
         def callback(indata: np.ndarray, frames: int, time_info: any, status: any) -> None:
             if status:
-                LOGGER.warning("sounddevice stream status: %s", status)
-            self._audio_queue.put(indata.copy())
+                # Suppress input overflow warnings to keep logs clean
+                if "input overflow" not in str(status).lower():
+                    LOGGER.warning("sounddevice stream status: %s", status)
+            if not self.is_paused:
+                self._audio_queue.put(indata.copy())
 
         self._stream = sd.InputStream(
             samplerate=self.sample_rate,
@@ -102,6 +107,26 @@ class VoiceActivityDetector:
                 LOGGER.error("Error closing stream: %s", exc)
             self._stream = None
         LOGGER.info("VoiceActivityDetector stopped.")
+
+    def pause(self) -> None:
+        """Pause audio capture to prevent feedback loop during TTS."""
+        self.is_paused = True
+        # Clear the queue to discard any audio captured just before pausing
+        while not self._audio_queue.empty():
+            try:
+                self._audio_queue.get_nowait()
+            except queue.Empty:
+                break
+
+    def resume(self) -> None:
+        """Resume audio capture after TTS is finished."""
+        # Clear the queue again just in case anything sneaked in
+        while not self._audio_queue.empty():
+            try:
+                self._audio_queue.get_nowait()
+            except queue.Empty:
+                break
+        self.is_paused = False
 
     def read_utterance(self) -> bytes:
         """Block until an utterance is completed, and return it as 16-bit PCM WAV bytes."""

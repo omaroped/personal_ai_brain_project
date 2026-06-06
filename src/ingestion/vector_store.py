@@ -114,6 +114,49 @@ class VectorStore:
         with self.lock:
             self.table.add(records)
 
+    def add_chunk(
+        self,
+        text: str,
+        source_file: str,
+        section: str = "General",
+        page_number: int = 1,
+        domain: str = "default",
+        content_type: str = "text",
+        metadata: dict | None = None,
+    ) -> str:
+        """Insert a single text chunk into the vector store.
+
+        Returns:
+            str: Generated unique ID for the chunk.
+        """
+        chunk_id = str(uuid4())
+        vector = self._get_embedder().embed(text)
+        
+        record = {
+            "id": chunk_id,
+            "text": text,
+            "display_text": f"[{section}] {text[:100]}...",
+            "vector": vector,
+            "source_file": source_file,
+            "page_number": page_number,
+            "section": section,
+            "chunk_index": 0,
+            "domain": domain,
+            "content_type": content_type,
+            "file_hash": "",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        if metadata:
+            # Metadata could be flattened or handled depending on schema needs
+            # For now, we keep it simple as our schema is fixed
+            pass
+
+        with self.lock:
+            self.table.add([record])
+        
+        return chunk_id
+
     def search(
         self, query: str, top_k: int = 5, domain_filter: str | None = None
     ) -> list[SearchResult]:

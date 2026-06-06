@@ -68,6 +68,6 @@ def collect_core_health() -> list[HealthStatus]:
     """
     return [
         check_http_service("ollama", f"{OLLAMA_BASE_URL}/api/tags"),
-        check_http_service("letta", f"{LETTA_BASE_URL}/health"),
+        check_http_service("letta", f"{LETTA_BASE_URL}/v1/health/"),
         check_path_ready("vectordb_dir", VECTORDB_DIR),
     ]

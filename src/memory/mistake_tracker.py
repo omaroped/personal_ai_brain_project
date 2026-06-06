@@ -11,6 +11,7 @@ import tempfile
 import uuid
 
 from src.common.logging_utils import configure_logging
+from src.ingestion.vector_store import VectorStore
 
 LOGGER = configure_logging(__name__)
 
@@ -38,9 +39,15 @@ def _tokenize(text: str) -> set[str]:
 
 @dataclass
 class MistakeTracker:
-    """Store, deduplicate, and query mistakes in a local JSON file."""
+    """Store, deduplicate, and query mistakes with semantic vector search."""
 
     storage_path: Path
+    vector_store: VectorStore | None = None
+
+    def __post_init__(self):
+        if self.vector_store is None:
+            # Mistake tracker uses the 'errors' table in LanceDB
+            self.vector_store = VectorStore("errors")
 
     def _load_all(self) -> list[dict]:
         if not self.storage_path.exists():
@@ -86,10 +93,21 @@ class MistakeTracker:
                 "occurrences": 1,
             }
         )
+
+        # Add to vector store for semantic search
+        if self.vector_store:
+            self.vector_store.add_chunk(
+                text=f"MISTAKE: {title_clean}\nCONTEXT: {context_clean}\nFIX: {fix_clean}",
+                source_file=str(self.storage_path),
+                section=title_clean,
+                domain="mistake",
+                metadata={"tags": tags_clean}
+            )
+
         self._save_all(records)
         LOGGER.info("Logged new mistake record for %s", title_clean)
 
-    def search(self, query: str, limit: int = 5) -> list[dict]:
+    def _fallback_search(self, query: str, limit: int = 5) -> list[dict]:
         """Return the most relevant prior mistakes for a query."""
         query_tokens = _tokenize(query)
         if not query_tokens:
@@ -111,6 +129,31 @@ class MistakeTracker:
 
         scored.sort(key=lambda item: (-item[0], -int(item[1].get("occurrences", 1))))
         return [record for _, record in scored[:limit]]
+
+    def search(self, query: str, limit: int = 5) -> list[dict]:
+        """Return the most relevant prior mistakes using semantic hybrid search."""
+        if not hasattr(self, "vector_store") or not self.vector_store:
+            return self._fallback_search(query, limit)
+
+        try:
+            results = self.vector_store.hybrid_search(query, top_k=limit)
+            
+            # Cross-reference vector results with full JSON records
+            records = self._load_all()
+            found_records = []
+            
+            for res in results:
+                # Match by title/section
+                for record in records:
+                    if record["title"] == res.section:
+                        if record not in found_records:
+                            found_records.append(record)
+                        break
+            
+            return found_records
+        except Exception as exc:
+            LOGGER.error("Vector search for mistakes failed: %s", exc)
+            return self._fallback_search(query, limit)
 
     def pre_task_check(self, task_description: str) -> list[dict]:
         """Run a lightweight search before starting a task."""

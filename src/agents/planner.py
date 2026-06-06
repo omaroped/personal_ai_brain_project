@@ -1,65 +1,50 @@
-# MODULE: Task Planner responsible for breaking down high-level goals into sub-tasks.
-"""Planner Agent that converts natural language goals into a structured execution plan."""
+# MODULE: Task Planner with ReAct loop for autonomous goal execution.
+"""Autonomous Planner Agent that completes goals using a think-act-observe cycle."""
 
 from __future__ import annotations
 
 import json
 import logging
 from typing import Any, Dict, List
-import ollama
 
 from src.common.logging_utils import configure_logging
+from src.agents.base import BaseAgent
 import config
 
 LOGGER = configure_logging(__name__)
 
-class TaskPlanner:
-    """Agent that reasons about a goal and produces a list of discrete tasks."""
+class TaskPlanner(BaseAgent):
+    """Agent that reasons about a goal and executes tools in a ReAct loop."""
 
-    def __init__(self, model: str = config.LOCAL_LLM_MODEL) -> None:
-        self.model = model
-        self.client = ollama.Client(host="http://127.0.0.1:11434")
+    def __init__(self, model: str = config.LOCAL_LLM_MODEL, dry_run: bool = False) -> None:
+        super().__init__(model=model, dry_run=dry_run, max_steps=10)
 
-    def plan(self, goal: str) -> List[Dict[str, Any]]:
+    def execute(self, goal: str) -> str:
         """
-        Break down a user goal into a list of executable sub-tasks.
+        Main execution loop for completing a user goal.
         """
-        LOGGER.info("Generating plan for goal: '%s' using model %s", goal, self.model)
-        
         system_prompt = (
-            "You are a master Task Planner. Break down complex goals into a sequence of small, verifiable sub-tasks. "
-            "Each sub-task must use one of: 'file_reader', 'web_search', 'python_executor', 'shell_command', 'brain_memory'. "
-            "Respond ONLY with a JSON array of task objects. No thinking text."
+            "You are a master Task Planner. Your job is to complete a user goal using tools.\n\n"
+            "For each step, respond ONLY with JSON in one of two formats:\n\n"
+            "Format A — use a tool:\n"
+            '{"type": "tool_call", "thought": "why I\'m doing this", "tool": "tool_name", "args": {...}}\n\n'
+            "Format B — done:\n"
+            '{"type": "final_answer", "content": "what was accomplished"}\n\n'
+            f"Available tools:\n{self.tool_registry.get_prompt_specification()}\n\n"
+            "Rules:\n"
+            "1. Always search_vault BEFORE assuming knowledge.\n"
+            "2. Stop at 10 steps maximum.\n"
+            "3. Respond ONLY with raw JSON. No markdown blocks."
         )
-
-        try:
-            response = self.client.chat(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Goal: {goal}"},
-                ],
-                format="json",
-                stream=False,
-            )
-            
-            message_content = response.get("message", {}).get("content", "[]")
-            LOGGER.debug("Raw Planner Response: %s", message_content)
-            
-            plan = json.loads(message_content)
-            if not isinstance(plan, list):
-                LOGGER.error("Planner returned non-list format: %s", message_content)
-                return []
-                
-            LOGGER.info("Plan generated successfully with %d steps.", len(plan))
-            return plan
-            
-        except Exception as exc:
-            LOGGER.error("Failed to generate plan: %s", exc)
-            return []
+        return self.run_loop(system_prompt, goal)
 
 if __name__ == "__main__":
-    planner = TaskPlanner()
-    test_goal = "List the files in my vault."
-    plan = planner.plan(test_goal)
-    print(json.dumps(plan, indent=2))
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("goal", type=str, help="The goal to execute.")
+    parser.add_argument("--dry-run", action="store_true", help="Log actions without executing.")
+    args = parser.parse_args()
+
+    planner = TaskPlanner(dry_run=args.dry_run)
+    final_result = planner.execute(args.goal)
+    print(f"\n--- FINAL RESULT ---\n{final_result}")

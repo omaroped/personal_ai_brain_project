@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block content %}
+<main>
+    <section class="main-content">
+        <div class="glass-panel status-grid">
+            <div class="status-item">
+                <span class="status-label">Ollama (LLM)</span>
+                <span class="status-value" id="ollama-status">
+                    <span class="dot"></span> Checking...
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Letta (Memory)</span>
+                <span class="status-value" id="letta-status">
+                    <span class="dot"></span> Checking...
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Master API</span>
+                <span class="status-value" id="api-status">
+                    <span class="dot dot-online"></span> ONLINE
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">VRAM Usage</span>
+                <span class="status-value">4.2GB / 6.0GB</span>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <h2 class="card-title"><i class="fas fa-microchip"></i> Recent Intelligence Stream</h2>
+            <div class="memory-stream" id="memory-stream">
+                <div class="memory-item">
+                    <div class="memory-meta">Just Now • Voice</div>
+                    <div class="memory-content">Listening for input...</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <aside>
+        <div class="glass-panel" style="margin-bottom: 24px;">
+            <h2 class="card-title"><i class="fas fa-microphone"></i> Audio Settings</h2>
+            <div class="status-item" style="background: transparent; border: none; padding: 0; flex-direction: column; align-items: flex-start;">
+                <span class="status-label">Active Microphone</span>
+                <select id="mic-selection" style="width: 100%; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">
+                    <option value="">Default Microphone</option>
+                </select>
+                <div id="mic-status-msg" style="font-size: 11px; margin-top: 4px; color: var(--accent-primary);"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel" style="margin-bottom: 24px;">
+            <h2 class="card-title"><i class="fas fa-link"></i> Authorized Apps</h2>
+            <div id="authorized-apps">
+                <div class="memory-item" style="border-left-color: var(--accent-secondary);">
+                    <div class="memory-meta">System</div>
+                    <div class="memory-content">No external apps connected.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel" style="margin-bottom: 24px; text-align: center;">
+            <button id="talk-btn" style="width: 100%; padding: 20px; font-size: 18px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                <i class="fas fa-microphone"></i> Start Speaking
+            </button>
+            <div id="talk-status" style="font-size: 12px; color: var(--text-dim); margin-top: 12px;">
+                Click or press <strong>Ctrl+Alt+V</strong> to trigger.
+            </div>
+        </div>
+
+        <div class="glass-panel" style="margin-bottom: 24px;">
+            <h2 class="card-title"><i class="fas fa-bolt"></i> Performance</h2>
+            <div class="status-item" style="background: transparent; border: none; padding: 0; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span class="status-label">OpenClaw (Cloud Auth)</span>
+                <input type="checkbox" id="openclaw-toggle" style="width: 20px; height: 20px; cursor: pointer;">
+            </div>
+            <div class="status-item" style="background: transparent; border: none; padding: 0; flex-direction: row; justify-content: space-between; align-items: center;">
+                <span class="status-label">Gemini API (Direct)</span>
+                <input type="checkbox" id="turbo-toggle" style="width: 20px; height: 20px; cursor: pointer;">
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 12px;">
+                Bypass local model for < 1s responses. OpenClaw uses existing CLI sessions.
+            </div>
+        </div>
+
+        <div class="glass-panel" style="margin-bottom: 24px;">
+            <h2 class="card-title"><i class="fas fa-microphone-alt"></i> Audio Settings</h2>
+
+            <div class="status-item" style="background: transparent; border: none; padding: 0;">
+                <span class="status-label">Core Identity</span>
+                <div class="memory-content" style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">
+                    Omar • Mechatronics Engineer • Psychology • AI
+                </div>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<script>
+    // Real-time status updates
+    async function updateStatus() {
+        try {
+            const resp = await fetch('/health');
+            const data = await resp.json();
+            
+            data.health.forEach(s => {
+                const el = document.getElementById(`${s.name.toLowerCase()}-status`);
+                if (el) {
+                    const isOnline = s.ok;
+                    const dotClass = isOnline ? "dot-online" : "dot-offline";
+                    const statusText = isOnline ? "ONLINE" : "OFFLINE";
+                    el.innerHTML = `<span class="dot ${dotClass}"></span> ${statusText}`;
+                }
+            });
+        } catch (e) {
+            console.error("Failed to fetch health status", e);
+        }
+    }
+
+    // Initial check
+    updateStatus();
+    setInterval(updateStatus, 5000);
+
+    // Intelligence Stream updates
+    const streamContainer = document.getElementById('memory-stream');
+    let lastStreamJson = "";
+
+    async function updateStream() {
+        try {
+            const resp = await fetch('/memory/stream?limit=10');
+            const data = await resp.json();
+            const currentJson = JSON.stringify(data.stream);
+            
+            if (currentJson === lastStreamJson) return;
+            lastStreamJson = currentJson;
+
+            if (data.stream.length === 0) {
+                streamContainer.innerHTML = '<div class="memory-item"><div class="memory-content">Listening for input...</div></div>';
+                return;
+            }
+
+            streamContainer.innerHTML = data.stream.map(entry => `
+                <div class="memory-item">
+                    <div class="memory-meta">${new Date(entry.timestamp).toLocaleTimeString()} • ${entry.user ? "Voice" : "System"}</div>
+                    <div class="memory-content">
+                        <strong>User:</strong> ${entry.user}<br>
+                        <strong>Brain:</strong> ${entry.brain}
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Failed to fetch memory stream", e);
+        }
+    }
+
+    updateStream();
+    setInterval(updateStream, 3000);
+
+    // Audio device management
+    const micSelect = document.getElementById('mic-selection');
+    const micMsg = document.getElementById('mic-status-msg');
+
+    async function loadAudioSettings() {
+        try {
+            // 1. Load available devices
+            const devicesResp = await fetch('/audio/devices');
+            const devicesData = await devicesResp.json();
+            
+            // Clear existing except default
+            micSelect.innerHTML = '<option value="">Default Microphone</option>';
+            
+            devicesData.devices.forEach(dev => {
+                const opt = document.createElement('option');
+                opt.value = dev.index;
+                opt.textContent = dev.name;
+                micSelect.appendChild(opt);
+            });
+
+            // 2. Load current settings
+            const settingsResp = await fetch('/audio/settings');
+            const settingsData = await settingsResp.json();
+            
+            if (settingsData.mic_index !== null) {
+                micSelect.value = settingsData.mic_index;
+            }
+        } catch (e) {
+            console.error("Failed to load audio settings", e);
+        }
+    }
+
+    micSelect.addEventListener('change', async () => {
+        const val = micSelect.value === "" ? null : parseInt(micSelect.value);
+        micMsg.textContent = "Updating mic...";
+        
+        try {
+            const resp = await fetch('/audio/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mic_index: val })
+            });
+            
+            if (resp.ok) {
+                micMsg.textContent = "Mic updated! Pipeline will restart VAD.";
+                setTimeout(() => { micMsg.textContent = ""; }, 3000);
+            } else {
+                micMsg.textContent = "Error updating mic.";
+            }
+        } catch (e) {
+            micMsg.textContent = "Error updating mic.";
+            console.error(e);
+        }
+    });
+
+    loadAudioSettings();
+
+    // Turbo Mode toggle
+    const turboToggle = document.getElementById('turbo-toggle');
+    const openclawToggle = document.getElementById('openclaw-toggle');
+    
+    // Check initial state
+    async function checkTurbo() {
+        try {
+            const resp = await fetch('/audio/settings');
+            const data = await resp.json();
+            turboToggle.checked = data.turbo === true;
+            openclawToggle.checked = data.openclaw === true;
+        } catch (e) {}
+    }
+
+    turboToggle.addEventListener('change', async () => {
+        try {
+            await fetch('/audio/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ turbo: turboToggle.checked })
+            });
+        } catch (e) {
+            console.error("Failed to update turbo mode", e);
+        }
+    });
+
+    openclawToggle.addEventListener('change', async () => {
+        try {
+            await fetch('/audio/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ openclaw: openclawToggle.checked })
+            });
+        } catch (e) {
+            console.error("Failed to update openclaw mode", e);
+        }
+    });
+
+    checkTurbo();
+
+    // Click to Talk
+    const talkBtn = document.getElementById('talk-btn');
+    const talkStatus = document.getElementById('talk-status');
+
+    talkBtn.addEventListener('click', async () => {
+        const originalText = talkBtn.innerHTML;
+        talkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+        talkBtn.style.opacity = '0.7';
+        
+        try {
+            const resp = await fetch('/voice/trigger', { method: 'POST' });
+            if (resp.ok) {
+                talkStatus.innerHTML = '<span style="color: var(--success);">Microphone activated! Speak now.</span>';
+                setTimeout(() => {
+                    talkStatus.innerHTML = 'Click or press <strong>Ctrl+Alt+V</strong> to trigger.';
+                }, 3000);
+            }
+        } catch (e) {
+            console.error("Trigger failed", e);
+        } finally {
+            talkBtn.innerHTML = originalText;
+            talkBtn.style.opacity = '1';
+        }
+    });
+</script>
+{% endblock %}
