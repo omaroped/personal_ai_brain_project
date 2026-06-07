@@ -3,7 +3,7 @@
 
 set -e
 
-PROJECT_ROOT="/home/omar/personal_ai_brain_project"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="$PROJECT_ROOT/venv"
 
 echo "Stopping services if running..."

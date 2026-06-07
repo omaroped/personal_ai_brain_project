@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import pytest
 
+import src.api.privacy_router as privacy_router
 from src.api.privacy_router import (
     choose_model_route,
     is_cloud_allowed_for_domain,
@@ -57,3 +58,29 @@ def test_route_selection_invalid_option() -> None:
     decision = choose_model_route("ai_tech", requested_route="sideways")
     assert decision.route == "local"
     assert "Unsupported route" in decision.reason
+
+
+def test_sensitive_domains_stay_local_even_when_cloud_enabled(monkeypatch) -> None:
+    """Privacy-blocked domains must stay local under all provider modes."""
+    monkeypatch.setattr(privacy_router, "ENABLE_CLOUD_MODELS", True)
+
+    auto_decision = choose_model_route("personal", requested_route="auto")
+    cloud_decision = choose_model_route("religion", requested_route="cloud")
+
+    assert auto_decision.route == "local"
+    assert auto_decision.allow_cloud is False
+    assert cloud_decision.route == "local"
+    assert cloud_decision.allow_cloud is False
+
+
+def test_allowed_domains_can_route_to_cloud_when_enabled(monkeypatch) -> None:
+    """Non-sensitive domains may route to cloud when cloud mode is explicitly enabled."""
+    monkeypatch.setattr(privacy_router, "ENABLE_CLOUD_MODELS", True)
+
+    auto_decision = choose_model_route("ai_tech", requested_route="auto")
+    cloud_decision = choose_model_route("education", requested_route="cloud")
+
+    assert auto_decision.route == "cloud"
+    assert auto_decision.allow_cloud is True
+    assert cloud_decision.route == "cloud"
+    assert cloud_decision.allow_cloud is True

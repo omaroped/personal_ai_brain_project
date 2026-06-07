@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/omar/personal_ai_brain_project
-Environment=PYTHONPATH=/home/omar/personal_ai_brain_project
-ExecStart=/home/omar/personal_ai_brain_project/venv/bin/python3 src/agents/proactive.py
+WorkingDirectory=%h/personal_ai_brain_project
+Environment=PYTHONPATH=%h/personal_ai_brain_project
+ExecStart=%h/personal_ai_brain_project/venv/bin/python3 src/agents/proactive.py
 Restart=always
 RestartSec=10
 

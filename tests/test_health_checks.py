@@ -15,7 +15,7 @@ from src.common.health import check_http_service, check_path_ready, collect_core
 def test_check_path_ready() -> None:
     """Path check should return ok for existing paths."""
     # Test existing
-    status = check_path_ready("root", Path("/home/omar"))
+    status = check_path_ready("root", Path.home())
     assert status.ok is True
     
     # Test missing

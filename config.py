@@ -10,28 +10,44 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _env_path(name: str, default: Path) -> Path:
+    """Read a filesystem path from the environment or fall back to the default."""
+    return Path(os.getenv(name, str(default))).expanduser()
+
+
+def _env_path_list(name: str, defaults: list[Path]) -> list[Path]:
+    """Read a colon-separated path list from the environment or use defaults."""
+    raw = os.getenv(name, "")
+    if not raw.strip():
+        return defaults
+    return [Path(item).expanduser() for item in raw.split(":") if item.strip()]
+
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"
-VAULT_DIR = DATA_DIR / "vault"
-VECTORDB_DIR = DATA_DIR / "vectordb"
-LOGS_DIR = DATA_DIR / "logs"
+DATA_DIR = _env_path("BRAIN_DATA_DIR", PROJECT_ROOT / "data")
+VAULT_DIR = _env_path("BRAIN_VAULT_DIR", DATA_DIR / "vault")
+VECTORDB_DIR = _env_path("BRAIN_VECTORDB_DIR", DATA_DIR / "vectordb")
+LOGS_DIR = _env_path("BRAIN_LOGS_DIR", DATA_DIR / "logs")
 DOCKER_DIR = PROJECT_ROOT / "docker"
 TESTS_DIR = PROJECT_ROOT / "tests"
 
-WATCH_DIRS = [
-    Path("/home/omar/Documents"),
-    Path("/home/omar/Downloads"),
-    VAULT_DIR,
-]
+WATCH_DIRS = _env_path_list(
+    "BRAIN_WATCH_DIRS",
+    [
+        Path.home() / "Documents",
+        Path.home() / "Downloads",
+        VAULT_DIR,
+    ],
+)
 
-INGESTION_INDEX_DB = DATA_DIR / "ingestion_index.db"
-LOG_FILE = DATA_DIR / "logs" / "brain.log"
-SETTINGS_FILE = DATA_DIR / "settings.json"
+INGESTION_INDEX_DB = _env_path("BRAIN_INGESTION_INDEX_DB", DATA_DIR / "ingestion_index.db")
+LOG_FILE = _env_path("BRAIN_LOG_FILE", DATA_DIR / "logs" / "brain.log")
+SETTINGS_FILE = _env_path("BRAIN_SETTINGS_FILE", DATA_DIR / "settings.json")
 
-LANCEDB_DOCUMENTS = VECTORDB_DIR / "documents"
-LANCEDB_PERSONAL = VECTORDB_DIR / "personal"
-LANCEDB_CONVERSATIONS = VECTORDB_DIR / "conversations"
-LANCEDB_ERRORS = VECTORDB_DIR / "errors"
+LANCEDB_DOCUMENTS = _env_path("BRAIN_LANCEDB_DOCUMENTS", VECTORDB_DIR / "documents")
+LANCEDB_PERSONAL = _env_path("BRAIN_LANCEDB_PERSONAL", VECTORDB_DIR / "personal")
+LANCEDB_CONVERSATIONS = _env_path("BRAIN_LANCEDB_CONVERSATIONS", VECTORDB_DIR / "conversations")
+LANCEDB_ERRORS = _env_path("BRAIN_LANCEDB_ERRORS", VECTORDB_DIR / "errors")
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")

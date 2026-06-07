@@ -10,19 +10,27 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-import sounddevice as sd
 import json
 import time
 
 import config
+from src.api.control_plane import build_control_plane_snapshot
 from src.common.logging_utils import configure_logging
 from src.common.health import collect_core_health
 from src.api.privacy_router import choose_model_route
+from src.identity.manager import IdentityManager
 from src.ingestion.vector_store import VectorStore
 from src.memory.letta_agent import OmarBrainAgent
 from src.memory.openclaw_agent import OpenClawAgent
 from src.agents.planner import TaskPlanner
 from src.api.ws_manager import manager as ws_manager
+from src.voice.protocol import (
+    TTSResponseEvent,
+    VoiceMessageType,
+    VoiceStatus,
+    VoiceStatusEvent,
+    parse_voice_message,
+)
 
 # Import existing routers/apps
 from src.ingestion.web_endpoint import app as ingestion_app
@@ -42,52 +50,7 @@ app.mount("/ingest", ingestion_app)
 letta_agent = OmarBrainAgent()
 openclaw_agent = OpenClawAgent()
 task_planner = TaskPlanner()
-
-class IdentityManager:
-    """Centralizes routing logic previously tangled in the voice pipeline."""
-    @staticmethod
-    def handle_input(transcript: str) -> str:
-        # Check if it's an action command
-        action_keywords = ["open", "search", "find", "summarize", "read", "run", "execute", "notify", "remind", "delegate"]
-        first_word = transcript.split()[0].lower() if transcript else ""
-        is_action = first_word in action_keywords or "open" in transcript.lower()
-
-        if is_action:
-            LOGGER.info("Action detected. Routing to Task Planner: '%s'", transcript)
-            goal = f"The user just said via voice: '{transcript}'. Execute tools if necessary and return a spoken summary."
-            return task_planner.execute(goal)
-
-        # Read settings
-        turbo_mode = False
-        openclaw_mode = True
-        if config.SETTINGS_FILE.exists():
-            try:
-                with open(config.SETTINGS_FILE, "r") as f:
-                    settings = json.load(f)
-                    turbo_mode = settings.get("turbo", False)
-                    openclaw_mode = settings.get("openclaw", True)
-            except Exception: pass
-
-        # OpenClaw
-        if openclaw_mode:
-            response = openclaw_agent.send_message(transcript)
-            if "Error:" not in response and "trouble connecting" not in response:
-                return response
-            LOGGER.warning("OpenClaw bypass failed: %s", response)
-
-        # Gemini
-        if turbo_mode and config.GEMINI_API_KEY:
-            LOGGER.info("Turbo Mode active. Routing to Gemini...")
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=config.GEMINI_API_KEY)
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                return model.generate_content(transcript).text
-            except Exception as e:
-                LOGGER.error("Gemini Turbo failed: %s", e)
-
-        # Letta
-        return letta_agent.send_message(transcript)
+identity_manager = IdentityManager(letta_agent=letta_agent, openclaw_agent=openclaw_agent)
 
 @app.websocket("/ws/voice")
 async def websocket_voice_endpoint(websocket: WebSocket):
@@ -95,31 +58,32 @@ async def websocket_voice_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
     try:
         while True:
-            # Expecting JSON: {"type": "transcript", "text": "Hello"}
             data = await websocket.receive_text()
-            payload = json.loads(data)
+            payload = parse_voice_message(data)
 
-            if payload.get("type") == "transcript":
+            if payload.get("type") == VoiceMessageType.TRANSCRIPT:
                 transcript = payload.get("text", "")
+                trace_id = payload.get("trace_id")
                 LOGGER.info("Received transcript via WS: %s", transcript)
 
-                await ws_manager.broadcast_status("thinking")
+                await ws_manager.broadcast_status(VoiceStatus.THINKING, trace_id=trace_id)
 
-                # Process through IdentityManager
                 start_query = time.perf_counter()
-                response_text = IdentityManager.handle_input(transcript)
+                action_keywords = ["open", "search", "find", "summarize", "read", "run", "execute", "notify", "remind", "delegate"]
+                first_word = transcript.split()[0].lower() if transcript else ""
+                is_action = first_word in action_keywords or "open" in transcript.lower()
+                if is_action:
+                    LOGGER.info("Action detected. Routing to Task Planner: '%s'", transcript)
+                    goal = f"The user just said via voice: '{transcript}'. Execute tools if necessary and return a spoken summary."
+                    response_text = task_planner.execute(goal)
+                else:
+                    response_text = identity_manager.respond(transcript).text
                 duration_query = (time.perf_counter() - start_query) * 1000
 
                 LOGGER.info("Brain responded: '%s' [%.2fms]", response_text, duration_query)
-
-                # Send response back to daemon to play
-                await websocket.send_text(json.dumps({
-                    "type": "tts_response",
-                    "text": response_text
-                }))
-
-                # Send back to idle state
-                await ws_manager.broadcast_status("idle")
+                await ws_manager.broadcast_status(VoiceStatus.SPEAKING, trace_id=trace_id)
+                await websocket.send_text(TTSResponseEvent(text=response_text, trace_id=trace_id).to_json())
+                await ws_manager.broadcast_status(VoiceStatus.IDLE, trace_id=trace_id)
 
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
@@ -182,6 +146,12 @@ async def health_status():
     """Return the health status of core dependencies."""
     return {"health": [asdict(status) for status in collect_core_health()]}
 
+@app.get("/control/status")
+async def control_status():
+    """Return a control-plane snapshot spanning health, identity, voice, and planner state."""
+    snapshot = build_control_plane_snapshot(identity_manager, ws_manager, task_planner)
+    return asdict(snapshot)
+
 @app.get("/search")
 async def search_vault(
     q: str = Query(..., description="Semantic search query"),
@@ -236,18 +206,16 @@ async def query_brain(request: BrainRequest):
                 "response": response.text
             }
 
-        # Ensure agent is ready
         if not letta_agent.agent_id:
             letta_agent.ensure_agent()
-        
-        # Send message and get response
-        response = letta_agent.send_message(request.input)
+        response = identity_manager.respond(request.input)
         
         return {
             "input": request.input,
             "agent_id": letta_agent.agent_id,
             "mode": "standard",
-            "response": response
+            "provider": response.provider,
+            "response": response.text
         }
     except Exception as exc:
         LOGGER.error("Brain endpoint failed: %s", exc)

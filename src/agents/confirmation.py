@@ -7,21 +7,12 @@ import logging
 from typing import Any, Dict
 
 from src.common.logging_utils import configure_logging
+from src.agents.tool_policy import get_tool_policy
 
 LOGGER = configure_logging(__name__)
 
 class ConfirmationGate:
     """Displays a confirmation prompt before any destructive agent action."""
-
-    # Set of tool names that ALWAYS require user approval
-    ALWAYS_CONFIRM = {
-        "write_file",
-        "run_python",
-        "shell_command",
-        "send_email",
-        "delete_file",
-        "execute_script",
-    }
 
     def __init__(self, auto_approve: bool = False) -> None:
         self.auto_approve = auto_approve
@@ -37,7 +28,8 @@ class ConfirmationGate:
             LOGGER.info("Auto-approving sensitive action: %s", tool_name)
             return True
 
-        if tool_name not in self.ALWAYS_CONFIRM:
+        policy = get_tool_policy(tool_name)
+        if not policy.requires_confirmation:
             return True
 
         print(f"\n{'='*60}")

@@ -158,6 +158,14 @@ class ExecuteCommandTool(BaseTool):
         except Exception as e:
             return f"Error executing command: {e}"
 
+class CaptureScreenTool(BaseTool):
+    name = "capture_screen"
+    description = "Take a screenshot of the user's desktop and analyze it. Use this when the user asks 'what am I looking at' or 'what is on my screen'. Args: prompt (str)"
+    
+    def run(self, prompt: str = "Describe what is currently visible on my screen.") -> str:
+        from src.agents.tools.vision import capture_screen
+        return capture_screen(prompt)
+
 # Register basic tools
 registry.register(SearchVaultTool())
 registry.register(ReadFileTool())
@@ -166,3 +174,4 @@ registry.register(DelegateTaskTool())
 registry.register(PythonSandboxTool())
 registry.register(BrowserTool())
 registry.register(ExecuteCommandTool())
+registry.register(CaptureScreenTool())

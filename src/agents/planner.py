@@ -38,6 +38,14 @@ class TaskPlanner(BaseAgent):
         )
         return self.run_loop(system_prompt, goal)
 
+    def get_runtime_status(self) -> dict:
+        """Return lightweight planner runtime details for the control plane."""
+        return {
+            "agent": self.__class__.__name__,
+            "max_steps": self.max_steps,
+            "last_trace": self.last_trace.to_dict() if self.last_trace else None,
+        }
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()

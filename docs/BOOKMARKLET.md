@@ -60,7 +60,7 @@ javascript:(function(){
 
 1. Ensure the ingestion API server is running on your local machine:
    ```bash
-   source /home/omar/personal_ai_brain_project/venv/bin/activate
+   source venv/bin/activate
    python3 src/ingestion/web_endpoint.py
    ```
 2. Navigate to any web page you want to remember.

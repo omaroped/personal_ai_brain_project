@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="/home/omar/personal_ai_brain_project"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "== Phase 1 static checks =="

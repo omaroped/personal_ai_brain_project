@@ -3,6 +3,7 @@ import time
 import logging
 from faster_whisper import WhisperModel
 import os
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -12,7 +13,7 @@ def benchmark_stt(model_size: str = "base", device: str = "cuda", compute_type: 
     """
     Benchmarks the faster-whisper model on a 5s audio clip.
     """
-    audio_path = "/home/omar/personal_ai_brain_project/tests/benchmark_5s.wav"
+    audio_path = str((Path(__file__).resolve().parents[2] / "tests" / "benchmark_5s.wav"))
     
     if not os.path.exists(audio_path):
         logger.error(f"Audio file not found: {audio_path}")

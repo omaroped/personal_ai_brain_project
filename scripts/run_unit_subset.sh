@@ -4,7 +4,7 @@
 set -e
 
 # Change to project root
-PROJECT_ROOT="/home/omar/personal_ai_brain_project"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Activate venv if it exists

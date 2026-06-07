@@ -49,10 +49,12 @@ pip install --upgrade pip --quiet
 
 # 3. Install Requirements
 echo -e "${YELLOW}Installing dependencies...${NC}"
-if [ -f "requirements.txt" ]; then
+if [ -f "requirements-core.txt" ]; then
+    pip install -r requirements-core.txt -r requirements-voice.txt -r requirements-agents.txt -r requirements-dev.txt --quiet
+elif [ -f "requirements.txt" ]; then
     pip install -r requirements.txt --quiet
 else
-    echo -e "${RED}✗ requirements.txt missing.${NC}"
+    echo -e "${RED}✗ requirements files missing.${NC}"
     exit 1
 fi
 
@@ -74,5 +76,8 @@ if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Creating .env file from template...${NC}"
     cp .env.example .env
 fi
+
+echo -e "${YELLOW}Validating runtime environment...${NC}"
+python scripts/validate_environment.py || true
 
 echo -e "${GREEN}Bootstrap complete! You can now run ./scripts/start_brain.sh${NC}"

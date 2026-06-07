@@ -36,6 +36,13 @@ class TextToSpeechService:
         self.voices_path = Path(voices_path)
         self.voice_name = voice_name
         self.kokoro = None
+        self._interrupt_event = __import__('threading').Event()
+
+    def interrupt(self) -> None:
+        """Immediately stop current audio playback and cancel pending synthesis."""
+        LOGGER.info("TTS Interrupted by user (Barge-in).")
+        self._interrupt_event.set()
+        sd.stop()
 
     def warmup(self) -> None:
         """Ensure models are downloaded and load them."""
@@ -114,16 +121,21 @@ class TextToSpeechService:
         audio_queue = queue.Queue()
         first_byte_latency = 0.0
         start_time = time.perf_counter()
+        self._interrupt_event.clear()
 
         def synthesize_worker():
             try:
                 for sentence in sentences:
+                    if self._interrupt_event.is_set():
+                        break
                     samples, sample_rate = self.kokoro.create(
                         sentence,
                         voice=self.voice_name,
                         speed=1.0,
                         lang="en-us",
                     )
+                    if self._interrupt_event.is_set():
+                        break
                     audio_queue.put((samples, sample_rate))
             except Exception as exc:
                 LOGGER.error("Synthesis worker failed: %s", exc)
@@ -137,6 +149,9 @@ class TextToSpeechService:
             LOGGER.info("Starting streaming audio playback (%d segments)...", len(sentences))
             first = True
             while True:
+                if self._interrupt_event.is_set():
+                    break
+                    
                 item = audio_queue.get()
                 if item is None:
                     break
@@ -149,12 +164,29 @@ class TextToSpeechService:
                     first = False
                 
                 # Wait for previous playback to finish before starting next
-                sd.wait()
+                # Check interruption frequently while waiting
+                while sd.get_stream() and sd.get_stream().active:
+                    if self._interrupt_event.is_set():
+                        sd.stop()
+                        break
+                    time.sleep(0.05)
+                
+                if self._interrupt_event.is_set():
+                    break
+                    
                 sd.play(samples, sample_rate)
             
             # Wait for final segment
-            sd.wait()
-            LOGGER.info("Audio playback complete.")
+            while sd.get_stream() and sd.get_stream().active:
+                if self._interrupt_event.is_set():
+                    sd.stop()
+                    break
+                time.sleep(0.05)
+                
+            if self._interrupt_event.is_set():
+                LOGGER.info("Audio playback aborted.")
+            else:
+                LOGGER.info("Audio playback complete.")
         except Exception as exc:
             LOGGER.error("Error during streaming speak playback: %s", exc)
         
